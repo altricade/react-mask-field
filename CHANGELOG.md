@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.2.0 (2025-03-18)
+
+### Features
+
+- Published interactive Storybook documentation to GitHub Pages
+- Added comprehensive documentation for building and deploying Storybook
+- Added publishing guide for npm releases
+- Updated README with badges and documentation links
+
+### Bug Fixes
+
+- Fixed Storybook configuration for proper GitHub Pages deployment
+- Resolved addon dependency issues in Storybook setup
+
 ## 1.1.0 (2025-03-18)
 
 ### Features
