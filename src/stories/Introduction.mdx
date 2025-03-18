@@ -1,0 +1,86 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Introduction" />
+
+# React Mask Field
+
+A lightweight, flexible input masking library for React applications built with TypeScript. This library provides customizable masked input components with type safety and modern React practices.
+
+## Features
+
+- 🚀 **Modern React API** - Based on hooks and functional components
+- 📦 **Lightweight** - No external dependencies
+- 🔒 **Type-safe** - Written in TypeScript with full type definitions
+- 🧰 **Specialized Components** - Components for common use cases like phone numbers, dates, and credit cards
+- 🎨 **Customizable** - Flexible formatting options
+- ⚛️ **Compatible** - Works with React 16.8+ including React 18 and React 19
+- 🛡️ **Clean DOM** - Properly filters out non-standard props from DOM elements
+
+## Components
+
+This library includes the following components:
+
+### MaskField
+
+The core component that provides input masking functionality. You can define custom mask patterns using:
+- `9` for digits
+- `a` for letters
+- `*` for alphanumeric characters
+
+```tsx
+<MaskField mask="(999) 999-9999" placeholder="(___) ___-____" />
+```
+
+### PhoneInput
+
+A specialized component for phone number input with country code support.
+
+```tsx
+<PhoneInput countryCode="US" />
+```
+
+### DateInput
+
+A component for date input with format options and validation.
+
+```tsx
+<DateInput format="MM/DD/YYYY" separator="/" enableDateValidation={true} />
+```
+
+### TimeInput
+
+A component for time input with 12-hour or 24-hour format options.
+
+```tsx
+<TimeInput format="12h" showSeconds={false} separator=":" />
+```
+
+### CreditCardInput
+
+A component for credit card input with automatic card type detection.
+
+```tsx
+<CreditCardInput detectCardType={true} />
+```
+
+## Installation
+
+```bash
+npm install @altricade/react-mask-field
+# or
+yarn add @altricade/react-mask-field
+# or
+pnpm add @altricade/react-mask-field
+```
+
+## Usage
+
+Import the components you need:
+
+```tsx
+import { MaskField, PhoneInput, DateInput, TimeInput, CreditCardInput } from '@altricade/react-mask-field';
+```
+
+## GitHub Repository
+
+[https://github.com/altricade/react-mask-field](https://github.com/altricade/react-mask-field)

@@ -6,6 +6,7 @@ module.exports = {
     "plugin:react-hooks/recommended",
     "plugin:@typescript-eslint/recommended",
     "prettier",
+    "plugin:storybook/recommended"
   ],
   plugins: ["react", "react-hooks", "@typescript-eslint"],
   env: {
