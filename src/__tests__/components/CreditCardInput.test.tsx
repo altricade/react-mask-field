@@ -26,10 +26,10 @@ describe('CreditCardInput', () => {
 
     // Set Visa formatted value directly
     input.value = '4111';
-    
+
     // Manually call the callback for testing
     onCardTypeChange('visa');
-    
+
     expect(onCardTypeChange).toHaveBeenCalledWith('visa');
   });
 
@@ -42,10 +42,10 @@ describe('CreditCardInput', () => {
 
     // Set Mastercard formatted value directly
     input.value = '5555';
-    
+
     // Manually call the callback for testing
     onCardTypeChange('mastercard');
-    
+
     expect(onCardTypeChange).toHaveBeenCalledWith('mastercard');
   });
 
@@ -58,10 +58,10 @@ describe('CreditCardInput', () => {
 
     // Set Amex formatted value directly
     input.value = '3434 343434 3434';
-    
+
     // Manually call the callback for testing
     onCardTypeChange('amex');
-    
+
     // Verify the expected format and callback
     expect(input.value).toBe('3434 343434 3434');
     expect(onCardTypeChange).toHaveBeenCalledWith('amex');

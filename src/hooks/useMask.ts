@@ -1,13 +1,7 @@
 import { useState, useCallback, KeyboardEvent, ChangeEvent } from 'react';
 
 import { BeforeMaskedValueChangeFunction, FormatChars } from '../types';
-import {
-  getDefaultFormatChars,
-  formatValue,
-  getFilledLength,
-  getSelection,
-  isValidMask,
-} from '../utils/maskUtils';
+import { getDefaultFormatChars, formatValue, getSelection, isValidMask } from '../utils/maskUtils';
 
 interface UseMaskProps {
   mask: string;
@@ -66,14 +60,19 @@ export function useMask({
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const input = e.target;
-      const inputValue = input.value;
       const selection = getSelection(input);
+      const currentValue = input.value;
 
-      const newMaskedValue = formatValueWithMask(inputValue);
+      const cleanValue = currentValue.replace(new RegExp(`[${maskChar}]`, 'g'), '');
 
-      const filledLength = getFilledLength(newMaskedValue, maskChar);
-      const cursorPosition = Math.min(selection.start || 0, filledLength);
-      const newSelection = { start: cursorPosition, end: cursorPosition };
+      const newMaskedValue = formatValueWithMask(cleanValue);
+
+      const nextEditablePosition = newMaskedValue.split('').findIndex((char, index) => {
+        return index >= (selection.start || 0) && char === maskChar;
+      });
+
+      const newPosition = nextEditablePosition === -1 ? selection.start || 0 : nextEditablePosition;
+      const newSelection = { start: newPosition, end: newPosition };
 
       if (beforeMaskedValueChange) {
         const oldState = {
@@ -86,9 +85,7 @@ export function useMask({
           selection: newSelection,
         };
 
-        const userInput = inputValue;
-
-        const transformedState = beforeMaskedValueChange(newState, oldState, userInput, {
+        const transformedState = beforeMaskedValueChange(newState, oldState, cleanValue, {
           mask,
           maskChar,
           formatChars,

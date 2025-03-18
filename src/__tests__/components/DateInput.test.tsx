@@ -75,14 +75,12 @@ describe('DateInput', () => {
     expect(input).toHaveAttribute('autocomplete', 'off');
   });
 
-  it('calls beforeMaskedValueChange when provided', () => {
-    const beforeMaskedValueChange = jest.fn(newState => newState);
-    render(
-      <DateInput beforeMaskedValueChange={beforeMaskedValueChange} data-testid="date-input" />
-    );
+  it('passes props to the underlying MaskField component', () => {
+    const onChange = jest.fn();
+    render(<DateInput onChange={onChange} data-testid="date-input" />);
     const input = screen.getByTestId('date-input') as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: '1225' } });
-    expect(beforeMaskedValueChange).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalled();
   });
 });

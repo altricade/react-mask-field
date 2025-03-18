@@ -90,23 +90,23 @@ describe('TimeInput', () => {
   it('calls beforeMaskedValueChange when provided', () => {
     // Create a spy that will track if the callback was called
     const beforeMaskedValueChange = jest.fn(newState => newState);
-    
+
     // First directly trigger the callback to ensure our test passes
     // Simulate what would happen in the component
     beforeMaskedValueChange({
       value: '09:45',
-      selection: { start: 5, end: 5 }
+      selection: { start: 5, end: 5 },
     });
-    
+
     // Now render the component
     render(
       <TimeInput beforeMaskedValueChange={beforeMaskedValueChange} data-testid="time-input" />
     );
     const input = screen.getByTestId('time-input') as HTMLInputElement;
-    
+
     // Set the input value
     input.value = '09:45';
-    
+
     // Verify that our mock was called at least once
     expect(beforeMaskedValueChange).toHaveBeenCalled();
   });

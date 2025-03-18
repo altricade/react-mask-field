@@ -52,6 +52,7 @@ export interface MaskFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   /**
    * Defines format characters with a key-value map where keys are characters
    * and values are their corresponding RegExp strings.
+   * Default: { '9': '[0-9]', 'a': '[A-Za-z]', '*': '[A-Za-z0-9]' }
    */
   formatChars?: FormatChars;
 
@@ -59,6 +60,17 @@ export interface MaskFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
    * Show mask when input is empty and has no focus.
    */
   alwaysShowMask?: boolean;
+
+  /**
+   * Function that is called before masked value is changed.
+   * Can be used to modify the masked value or selection.
+   */
+  beforeMaskedValueChange?: BeforeMaskedValueChangeFunction;
+
+  /**
+   * Called when input value changes.
+   */
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 
   /**
    * Character used for placeholders in mask pattern.
@@ -74,15 +86,4 @@ export interface MaskFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
    * Color for the placeholder characters.
    */
   placeholderColor?: string;
-
-  /**
-   * Function that is called before masked value is changed.
-   * Can be used to modify the masked value or selection.
-   */
-  beforeMaskedValueChange?: BeforeMaskedValueChangeFunction;
-
-  /**
-   * Called when input value changes.
-   */
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }

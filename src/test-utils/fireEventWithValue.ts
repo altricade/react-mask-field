@@ -5,7 +5,6 @@ import { fireEvent } from '@testing-library/react';
  * that properly sets the input value for testing masked inputs
  */
 export function fireEventWithValue(input: HTMLInputElement, value: string) {
-  // Set the value directly on the input
   const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
     window.HTMLInputElement.prototype,
     'value'
@@ -16,8 +15,7 @@ export function fireEventWithValue(input: HTMLInputElement, value: string) {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // Then fire the change event
   fireEvent.change(input, { target: { value } });
-  
+
   return input;
 }

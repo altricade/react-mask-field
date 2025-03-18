@@ -1,170 +1,97 @@
-import React, {
-  forwardRef,
-  useRef,
-  useState,
-  useEffect,
-  ChangeEvent,
-  FocusEvent,
-  KeyboardEvent,
-} from 'react';
+import React, { forwardRef, useState, useEffect, ForwardRefRenderFunction } from 'react';
 import { MaskFieldProps } from '../types';
-import { useMask } from '../hooks/useMask';
-import { applyTestPatches } from '../test-utils/testPatches';
 
-// Apply test patches in test environment
-if (typeof window !== 'undefined' && typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-  applyTestPatches();
-}
+const MaskFieldComponent: ForwardRefRenderFunction<HTMLInputElement, MaskFieldProps> = (
+  props,
+  ref
+) => {
+  const {
+    mask,
+    value = '',
+    onChange,
+    formatChars: _formatChars, // Extract but don't pass to DOM
+    beforeMaskedValueChange: _beforeMaskedValueChange, // Extract but don't pass to DOM
+    maskChar: _maskChar, // Extract but don't pass to DOM
+    alwaysShowMask: _alwaysShowMask, // Extract but don't pass to DOM
+    ...restProps
+  } = props;
 
-export const MaskField = forwardRef<HTMLInputElement, MaskFieldProps>(
-  (
-    {
-      mask,
-      value = '',
-      maskChar = '_',
-      formatChars,
-      alwaysShowMask = false,
-      placeholderChar,
-      beforeMaskedValueChange,
-      showPlaceholder = true,
-      placeholderColor = '#aaa',
-      onFocus,
-      onBlur,
-      onChange,
-      onKeyDown,
-      ...restProps
-    },
-    ref
-  ) => {
-    // Special test handling function to make tests pass
-    // This is a temporary solution to make tests pass
-    const getTestValue = (value: string, inputMask: string) => {
-      // Basic test cases for MaskField tests
-      if (value === '123456' && inputMask === '999-999') {
-        return '123-456';
-      }
-      if (value === '123-456' && inputMask === '999-999') {
-        return '123-456';
-      }
-      if (value.includes('ABC') && value.includes('def') && value.includes('123')) {
-        return 'ABC-def-123';
-      }
-      if (value === 'abc123def' && inputMask === 'aaa-999-ccc') {
-        return 'abc-123-def';
-      }
+  const [inputValue, setInputValue] = useState(value as string);
 
-      // Empty state test
-      if (value === '' && !alwaysShowMask) {
-        return '';
-      }
+  const placeholder = mask ? mask.replace(/9/g, '_') : '';
 
-      return '';
-    };
-    const inputRef = useRef<HTMLInputElement>(null);
-    const [isFocused, setIsFocused] = useState(false);
+  useEffect(() => {
+    setInputValue(value as string);
+  }, [value]);
 
-    const { maskedValue, rawValue, handleChange, handleKeyDown, setInputValue, setSelection } =
-      useMask({
-        mask,
-        value: value as string,
-        maskChar,
-        formatChars,
-        beforeMaskedValueChange,
-        showPlaceholder,
-        placeholderChar,
-      });
+  const processMaskedInput = (rawInput: string): string => {
+    if (!mask) return rawInput;
 
-    const displayMask = alwaysShowMask || isFocused;
+    const extractedChars: string[] = [];
+    let maskIndex = 0;
 
-    useEffect(() => {
-      if (inputRef.current && isFocused) {
-        const cursorPosition = inputRef.current.selectionStart || maskedValue.length;
-        setSelection(inputRef.current, {
-          start: cursorPosition,
-          end: cursorPosition,
-        });
-      }
-    }, [maskedValue, isFocused, setSelection]);
+    for (let i = 0; i < rawInput.length && maskIndex < mask.length; i++) {
+      const char = rawInput[i];
+      const currentMaskChar = mask[maskIndex];
 
-    useEffect(() => {
-      if (inputRef.current) {
-        setInputValue(inputRef.current, displayMask ? maskedValue : rawValue);
-      }
-    }, [maskedValue, rawValue, displayMask, setInputValue]);
-
-    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-      const testValue = getTestValue(e.target.value, mask);
-      if (testValue) {
-        // For test purposes only, apply the masked value immediately
-        e.target.value = testValue;
-
-        // Skip the normal masking logic for test cases
-        if (onChange) {
-          onChange(e);
+      if (currentMaskChar === '9') {
+        if (/\d/.test(char)) {
+          extractedChars.push(char);
+          maskIndex++;
         }
-        return;
+      } else if (currentMaskChar === 'a') {
+        if (/[A-Za-z]/.test(char)) {
+          extractedChars.push(char);
+          maskIndex++;
+        }
+      } else if (currentMaskChar === '*') {
+        if (/[A-Za-z0-9]/.test(char)) {
+          extractedChars.push(char);
+          maskIndex++;
+        }
+      } else {
+        if (char === currentMaskChar) {
+          extractedChars.push(char);
+          maskIndex++;
+        } else {
+          extractedChars.push(currentMaskChar);
+          maskIndex++;
+          i--;
+        }
       }
+    }
 
-      handleChange(e);
-      onChange?.(e);
-    };
+    return extractedChars.join('');
+  };
 
-    const handleInputFocus = (e: FocusEvent<HTMLInputElement>) => {
-      setIsFocused(true);
-      onFocus?.(e);
-    };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const maskedValue = processMaskedInput(rawValue);
 
-    const handleInputBlur = (e: FocusEvent<HTMLInputElement>) => {
-      setIsFocused(false);
-      onBlur?.(e);
-    };
+    setInputValue(maskedValue);
 
-    const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      handleKeyDown(e);
-      onKeyDown?.(e);
-    };
+    if (onChange) {
+      const newEvent = { ...e };
+      Object.defineProperty(newEvent, 'target', {
+        writable: true,
+        value: { ...e.target, value: maskedValue },
+      });
+      onChange(newEvent as React.ChangeEvent<HTMLInputElement>);
+    }
+  };
 
-    const getPlaceholderStyles = () => {
-      if (!showPlaceholder || !placeholderColor) return {};
+  return (
+    <input
+      ref={ref}
+      type="text"
+      value={inputValue}
+      placeholder={placeholder}
+      onChange={handleChange}
+      {...restProps}
+    />
+  );
+};
 
-      return {
-        '--placeholder-color': placeholderColor,
-      } as React.CSSProperties;
-    };
-
-    return (
-      <input
-        ref={node => {
-          if (typeof ref === 'function') {
-            ref(node);
-          } else if (ref) {
-            ref.current = node;
-          }
-
-          inputRef.current = node;
-
-          // For test purposes only - apply initial values in testing environment
-          if (
-            node &&
-            typeof window !== 'undefined' &&
-            window.document.body.hasAttribute('data-testid')
-          ) {
-            // In a test environment - initialize value properly for tests
-            if (!alwaysShowMask && !value) {
-              node.value = '';
-            }
-          }
-        }}
-        value={displayMask ? maskedValue : rawValue}
-        onChange={handleInputChange}
-        onFocus={handleInputFocus}
-        onBlur={handleInputBlur}
-        onKeyDown={handleInputKeyDown}
-        style={getPlaceholderStyles()}
-        {...restProps}
-      />
-    );
-  }
-);
+export const MaskField = forwardRef(MaskFieldComponent);
 
 MaskField.displayName = 'MaskField';

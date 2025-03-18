@@ -10,14 +10,22 @@ This document outlines the TypeScript improvements made to enhance type safety, 
    - Replaced `any` types with specific types
    - Added proper return type annotations to functions
    - Used string literal unions for enum-like options
+   - Added proper typing for the `beforeMaskedValueChange` function
 
 2. **Component Interface Improvements**
 
    - Fixed HTMLInputElement type assertions in test files
    - Added proper event types to all handlers
    - Improved generics usage for better type inference
+   - Used proper type assertions when destructuring props
 
-3. **Code Quality Enhancements**
+3. **DOM Handling Improvements**
+
+   - Properly filtered out non-standard props from DOM elements
+   - Used type assertions to prevent TypeScript errors when filtering props
+   - Added proper naming for unused variables with underscore prefixes
+
+4. **Code Quality Enhancements**
    - Fixed unnecessary escape characters in regex patterns
    - Changed `let` declarations to `const` when variables are never reassigned
    - Added missing dependencies to useEffect hooks
@@ -31,10 +39,35 @@ This document outlines the TypeScript improvements made to enhance type safety, 
 
    - Improved ref forwarding with proper typing
    - Added proper event types to onChange handlers
+   - Extracted non-standard props to prevent React warnings:
+
+   ```typescript
+   const {
+     mask,
+     value = '',
+     onChange,
+     formatChars: _formatChars, // Extract but don't pass to DOM
+     beforeMaskedValueChange: _beforeMaskedValueChange, // Extract but don't pass to DOM
+     maskChar: _maskChar, // Extract but don't pass to DOM
+     alwaysShowMask: _alwaysShowMask, // Extract but don't pass to DOM
+     ...restProps
+   } = props;
+   ```
 
 2. **DateInput.tsx**
 
-   - Added type annotations to the `handleBeforeMaskedValueChange` function parameters:
+   - Added type annotations to the `handleBeforeMaskedValueChange` function parameters
+   - Filtered out DateInput-specific props before passing to DOM elements:
+
+   ```typescript
+   // Filter out DateInput-specific props to avoid React DOM warnings
+   const {
+     format: _,
+     separator: __,
+     enableDateValidation: ___,
+     ...restProps
+   } = props as DateInputProps;
+   ```
 
    ```typescript
    const handleBeforeMaskedValueChange = (
@@ -50,7 +83,21 @@ This document outlines the TypeScript improvements made to enhance type safety, 
 3. **TimeInput.tsx**
 
    - Fixed type annotations for the `handleBeforeMaskedValueChange` function
-   - Changed variable declarations from `let` to `const` where appropriate:
+   - Changed variable declarations from `let` to `const` where appropriate
+   - Filtered out TimeInput-specific props before passing to DOM elements:
+
+   ```typescript
+   // Filter out TimeInput-specific props to avoid React DOM warnings
+   const {
+     format: _,
+     showSeconds: __,
+     separator: ___,
+     enableTimeValidation: ____,
+     ...restProps
+   } = props as TimeInputProps;
+   ```
+
+   - Improved variable usage with proper type assertions:
 
    ```typescript
    // Before

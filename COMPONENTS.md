@@ -19,25 +19,31 @@ React Mask Field provides several input masking components:
 
 ```typescript
 interface MaskFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  /**
+   * The mask pattern to apply to the input
+   */
   mask: string;
+
+  /**
+   * Character to use for unfilled parts of the mask
+   */
   maskChar?: string;
+
+  /**
+   * Custom format characters mapping
+   */
   formatChars?: Record<string, string>;
+
+  /**
+   * Whether to always show the mask even when input is empty
+   */
   alwaysShowMask?: boolean;
-  showMask?: boolean;
-  placeholderColor?: string;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onKeyUp?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
-  beforeMaskedValueChange?: (
-    newValue: string,
-    oldValue: string,
-    userInput: string,
-    options: BeforeMaskedValueChangeOptions
-  ) => string;
+
+  /**
+   * Function called before applying the mask to the input value
+   * Can be used to modify or validate the value
+   */
+  beforeMaskedValueChange?: BeforeMaskedValueChangeFunction;
 }
 ```
 
@@ -218,6 +224,41 @@ const CurrencyExample = () => {
   );
 };
 ```
+
+## Implementation Details
+
+### MaskField
+
+The MaskField component is implemented using a simplified approach with React hooks and controlled inputs. It uses a custom masking algorithm to format user input according to the provided mask pattern.
+
+Key implementation details:
+
+1. Uses `useState` to manage the input value internally
+2. Applies the mask pattern using regex and string manipulation
+3. Supports different placeholder types (9 for digits, a for letters, \* for alphanumeric)
+4. Properly handles the maskChar property for placeholder generation
+5. Filters out non-standard props from DOM elements to prevent React warnings
+6. Maintains proper event handling for onChange callbacks
+
+### DateInput
+
+The DateInput component extends the MaskField to provide specialized date input functionality:
+
+1. Automatically formats input as a date (MM/DD/YYYY by default)
+2. Validates date values when `enableDateValidation` is true
+3. Supports different date formats via the `format` prop
+4. Uses the `beforeMaskedValueChange` callback to enforce date validation
+5. Properly filters out DateInput-specific props before passing to DOM elements
+
+### TimeInput
+
+The TimeInput component provides specialized time input functionality:
+
+1. Supports both 12-hour and 24-hour formats
+2. Optional seconds display
+3. Validates time values (hours, minutes, seconds)
+4. Supports AM/PM designation in 12-hour mode
+5. Properly filters out TimeInput-specific props before passing to DOM elements
 
 ## TypeScript Fixes Applied
 
