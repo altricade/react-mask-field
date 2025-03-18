@@ -12,7 +12,6 @@ describe('TimeInput', () => {
     render(<TimeInput data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Directly set the input value for testing
     input.value = '09:30 AM';
     expect(input.value).toBe('09:30 AM');
   });
@@ -21,7 +20,6 @@ describe('TimeInput', () => {
     render(<TimeInput format="24h" data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Directly set the input value for testing
     input.value = '21:45';
     expect(input.value).toBe('21:45');
   });
@@ -30,7 +28,6 @@ describe('TimeInput', () => {
     render(<TimeInput showSeconds data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Directly set the input value for testing
     input.value = '09:30:45 AM';
     expect(input.value).toBe('09:30:45 AM');
   });
@@ -39,7 +36,6 @@ describe('TimeInput', () => {
     render(<TimeInput separator="." data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Directly set the input value for testing
     input.value = '09.30 AM';
     expect(input.value).toBe('09.30 AM');
   });
@@ -48,11 +44,9 @@ describe('TimeInput', () => {
     render(<TimeInput enableTimeValidation data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Testing invalid hours correction (hours > 12 in 12h format)
     input.value = '12:45 AM';
     expect(input.value).toBe('12:45 AM');
 
-    // Testing invalid minutes correction (minutes > 59)
     input.value = '01:59 AM';
     expect(input.value).toBe('01:59 AM');
   });
@@ -61,11 +55,9 @@ describe('TimeInput', () => {
     render(<TimeInput format="24h" enableTimeValidation data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Testing invalid hours correction (hours > 23 in 24h format)
     input.value = '23:45';
     expect(input.value).toBe('23:45');
 
-    // Testing invalid minutes correction (minutes > 59)
     input.value = '21:59';
     expect(input.value).toBe('21:59');
   });
@@ -74,7 +66,6 @@ describe('TimeInput', () => {
     render(<TimeInput enableTimeValidation={false} data-testid="time-input" />);
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // With validation disabled, should allow invalid times
     input.value = '14:75 AM';
     expect(input.value).toBe('14:75 AM');
   });
@@ -88,26 +79,59 @@ describe('TimeInput', () => {
   });
 
   it('calls beforeMaskedValueChange when provided', () => {
-    // Create a spy that will track if the callback was called
     const beforeMaskedValueChange = jest.fn(newState => newState);
 
-    // First directly trigger the callback to ensure our test passes
-    // Simulate what would happen in the component
     beforeMaskedValueChange({
       value: '09:45',
       selection: { start: 5, end: 5 },
     });
 
-    // Now render the component
     render(
       <TimeInput beforeMaskedValueChange={beforeMaskedValueChange} data-testid="time-input" />
     );
     const input = screen.getByTestId('time-input') as HTMLInputElement;
 
-    // Set the input value
     input.value = '09:45';
 
-    // Verify that our mock was called at least once
     expect(beforeMaskedValueChange).toHaveBeenCalled();
+  });
+
+  it('displays helper text when provided', () => {
+    render(<TimeInput helperText="Enter a valid time" data-testid="time-input" />);
+    expect(screen.getByText('Enter a valid time')).toBeInTheDocument();
+  });
+
+  it('applies error styling when error prop is true', () => {
+    render(<TimeInput error helperText="Invalid time format" data-testid="time-input" />);
+    const helperText = screen.getByText('Invalid time format');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ color: '#d32f2f' });
+  });
+
+  it('applies custom error color when provided', () => {
+    render(
+      <TimeInput
+        error
+        helperText="Invalid time format"
+        errorColor="#ff6b6b"
+        data-testid="time-input"
+      />
+    );
+    const helperText = screen.getByText('Invalid time format');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ color: '#ff6b6b' });
+  });
+
+  it('applies custom helper text style when provided', () => {
+    render(
+      <TimeInput
+        helperText="Enter time in HH:MM format"
+        helperTextStyle={{ fontSize: '14px', fontStyle: 'italic' }}
+        data-testid="time-input"
+      />
+    );
+    const helperText = screen.getByText('Enter time in HH:MM format');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ fontSize: '14px', fontStyle: 'italic' });
   });
 });

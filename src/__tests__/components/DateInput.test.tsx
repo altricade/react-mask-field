@@ -12,7 +12,6 @@ describe('DateInput', () => {
     render(<DateInput data-testid="date-input" />);
     const input = screen.getByTestId('date-input') as HTMLInputElement;
 
-    // Set value directly instead of using fireEvent
     input.value = '12/25/2023';
     expect(input.value).toBe('12/25/2023');
   });
@@ -21,14 +20,12 @@ describe('DateInput', () => {
     const { rerender } = render(<DateInput format="DD/MM/YYYY" data-testid="date-input" />);
     let input = screen.getByTestId('date-input') as HTMLInputElement;
 
-    // Set value directly instead of using fireEvent
     input.value = '25/12/2023';
     expect(input.value).toBe('25/12/2023');
 
     rerender(<DateInput format="YYYY-MM-DD" data-testid="date-input" />);
     input = screen.getByTestId('date-input') as HTMLInputElement;
 
-    // Set value directly for the new format
     input.value = '2023-12-25';
     expect(input.value).toBe('2023-12-25');
   });
@@ -37,7 +34,6 @@ describe('DateInput', () => {
     render(<DateInput format="MM/DD/YYYY" separator="." data-testid="date-input" />);
     const input = screen.getByTestId('date-input') as HTMLInputElement;
 
-    // Set value directly with the custom separator
     input.value = '12.25.2023';
     expect(input.value).toBe('12.25.2023');
   });
@@ -46,13 +42,9 @@ describe('DateInput', () => {
     render(<DateInput enableDateValidation data-testid="date-input" />);
     const input = screen.getByTestId('date-input') as HTMLInputElement;
 
-    // Testing invalid month correction (month > 12)
-    // Set the corrected value directly
     input.value = '12/25/2023';
     expect(input.value).toBe('12/25/2023');
 
-    // Testing invalid day correction (day > days in month)
-    // February 2023 has 28 days, so it should correct to 02/28/2023
     input.value = '02/28/2023';
     expect(input.value).toBe('02/28/2023');
   });
@@ -61,8 +53,6 @@ describe('DateInput', () => {
     render(<DateInput enableDateValidation={false} data-testid="date-input" />);
     const input = screen.getByTestId('date-input') as HTMLInputElement;
 
-    // With validation disabled, should allow invalid dates
-    // Set the invalid value directly
     input.value = '13/32/2023';
     expect(input.value).toBe('13/32/2023');
   });
@@ -82,5 +72,39 @@ describe('DateInput', () => {
 
     fireEvent.change(input, { target: { value: '1225' } });
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it('displays helper text when provided', () => {
+    render(<DateInput helperText="Enter a valid date" data-testid="date-input" />);
+    expect(screen.getByText('Enter a valid date')).toBeInTheDocument();
+  });
+
+  it('applies error styling when error prop is true', () => {
+    render(<DateInput error helperText="Invalid date" data-testid="date-input" />);
+    const helperText = screen.getByText('Invalid date');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ color: '#d32f2f' });
+  });
+
+  it('applies custom error color when provided', () => {
+    render(
+      <DateInput error helperText="Invalid date" errorColor="#ff6b6b" data-testid="date-input" />
+    );
+    const helperText = screen.getByText('Invalid date');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ color: '#ff6b6b' });
+  });
+
+  it('applies custom helper text style when provided', () => {
+    render(
+      <DateInput
+        helperText="Enter a valid date"
+        helperTextStyle={{ fontSize: '14px', fontStyle: 'italic' }}
+        data-testid="date-input"
+      />
+    );
+    const helperText = screen.getByText('Enter a valid date');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ fontSize: '14px', fontStyle: 'italic' });
   });
 });

@@ -86,4 +86,25 @@ export interface MaskFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
    * Color for the placeholder characters.
    */
   placeholderColor?: string;
+
+  /**
+   * If true, the input will be marked as having an error.
+   */
+  error?: boolean;
+
+  /**
+   * Helper text to display below the input.
+   */
+  helperText?: React.ReactNode;
+
+  /**
+   * Color for the error state border and text.
+   * Default is '#d32f2f' (red).
+   */
+  errorColor?: string;
+
+  /**
+   * Custom styles for the helper text container.
+   */
+  helperTextStyle?: React.CSSProperties;
 }

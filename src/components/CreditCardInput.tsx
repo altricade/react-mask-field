@@ -107,6 +107,10 @@ const CreditCardInputComponent: ForwardRefRenderFunction<HTMLInputElement, Credi
     cardType: _,
     detectCardType: __,
     onCardTypeChange: ___,
+    error,
+    helperText,
+    errorColor,
+    helperTextStyle,
     ...restProps
   } = props as CreditCardInputProps;
 
@@ -118,6 +122,10 @@ const CreditCardInputComponent: ForwardRefRenderFunction<HTMLInputElement, Credi
       autoComplete="cc-number"
       placeholder={getMask().replace(/9/g, '_')}
       maxLength={getMask().length}
+      error={error}
+      helperText={helperText}
+      errorColor={errorColor}
+      helperTextStyle={helperTextStyle}
       {...restProps}
       value={value}
       onChange={handleChange}

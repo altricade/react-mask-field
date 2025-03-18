@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.3.0 (2025-03-18)
+
+### Features
+
+- Added error styling and helper text functionality to all input components:
+  - DateInput
+  - PhoneInput
+  - TimeInput
+  - CreditCardInput
+  - MaskField (previously implemented)
+- Added new props to all input components:
+  - `error`: Boolean to indicate if the input is in an error state
+  - `helperText`: Text to display below the input for guidance
+  - `errorColor`: Custom color for error state styling
+  - `helperTextStyle`: Custom styles for the helper text container
+- Added comprehensive Storybook examples showcasing error states and validation
+- Added tests for the new error and helper text functionality
+
 ## 1.2.0 (2025-03-18)
 
 ### Features

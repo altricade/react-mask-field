@@ -13,6 +13,10 @@ const MaskFieldComponent: ForwardRefRenderFunction<HTMLInputElement, MaskFieldPr
     beforeMaskedValueChange: _beforeMaskedValueChange, // Extract but don't pass to DOM
     maskChar: _maskChar, // Extract but don't pass to DOM
     alwaysShowMask: _alwaysShowMask, // Extract but don't pass to DOM
+    error = false,
+    helperText,
+    errorColor = '#d32f2f',
+    helperTextStyle,
     ...restProps
   } = props;
 
@@ -80,15 +84,38 @@ const MaskFieldComponent: ForwardRefRenderFunction<HTMLInputElement, MaskFieldPr
     }
   };
 
+  // Memoize styles to avoid recreating objects on each render
+  const inputStyle = error
+    ? {
+        borderColor: errorColor,
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        outline: 'none',
+        ...(restProps.style || {}),
+      }
+    : restProps.style;
+
+  const helperTextContainerStyle = {
+    marginTop: '4px',
+    fontSize: '0.75rem',
+    lineHeight: '1.66',
+    color: error ? errorColor : 'rgba(0, 0, 0, 0.6)',
+    ...helperTextStyle,
+  };
+
   return (
-    <input
-      ref={ref}
-      type="text"
-      value={inputValue}
-      placeholder={placeholder}
-      onChange={handleChange}
-      {...restProps}
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      <input
+        ref={ref}
+        type="text"
+        value={inputValue}
+        placeholder={placeholder}
+        onChange={handleChange}
+        style={inputStyle}
+        {...restProps}
+      />
+      {helperText && <div style={helperTextContainerStyle}>{helperText}</div>}
+    </div>
   );
 };
 

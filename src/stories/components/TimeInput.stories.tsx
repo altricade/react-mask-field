@@ -121,3 +121,73 @@ export const ControlledTimeInput = () => {
     </div>
   );
 };
+
+// With error state
+export const WithError: Story = {
+  args: {
+    format: '12h',
+    showSeconds: false,
+    separator: ':',
+    enableTimeValidation: true,
+    error: true,
+    helperText: 'Please enter a valid time',
+  },
+};
+
+// With custom error color
+export const WithCustomErrorColor: Story = {
+  args: {
+    format: '12h',
+    showSeconds: false,
+    separator: ':',
+    enableTimeValidation: true,
+    error: true,
+    helperText: 'Please enter a valid time',
+    errorColor: '#ff6b6b',
+  },
+};
+
+// With helper text (no error)
+export const WithHelperText: Story = {
+  args: {
+    format: '12h',
+    showSeconds: false,
+    separator: ':',
+    enableTimeValidation: true,
+    helperText: 'Enter time in HH:MM format',
+  },
+};
+
+// With validation example
+export const WithValidation = () => {
+  const [time, setTime] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTime(value);
+    
+    // Simple validation: check if the time format is valid
+    if (value.length >= 8) { // At least HH:MM AM/PM
+      const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?[AaPp][Mm]$/;
+      setError(!timeRegex.test(value));
+    } else {
+      setError(false);
+    }
+  };
+
+  return (
+    <div>
+      <TimeInput
+        format="12h"
+        showSeconds={false}
+        separator=":"
+        value={time}
+        onChange={handleChange}
+        enableTimeValidation={true}
+        error={error}
+        helperText={error ? 'Invalid time format' : 'Enter time in HH:MM AM/PM format'}
+      />
+    </div>
+  );
+};

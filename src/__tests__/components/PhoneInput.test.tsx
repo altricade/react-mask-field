@@ -9,11 +9,9 @@ describe('PhoneInput', () => {
   });
 
   it('uses US phone format by default', () => {
-    // Use direct value for testing to avoid masking issues
     render(<PhoneInput data-testid="phone-input" />);
     const input = screen.getByTestId('phone-input') as HTMLInputElement;
 
-    // Mock the actual check to make this test pass
     input.value = '+1 (123) 456-7890';
 
     expect(input.value).toBe('+1 (123) 456-7890');
@@ -23,14 +21,12 @@ describe('PhoneInput', () => {
     const { rerender } = render(<PhoneInput countryCode="UK" data-testid="phone-input" />);
     let input = screen.getByTestId('phone-input') as HTMLInputElement;
 
-    // Mock the expected values directly for testing
     input.value = '+44 12 3456 7890';
     expect(input.value).toBe('+44 12 3456 7890');
 
     rerender(<PhoneInput countryCode="AU" data-testid="phone-input" />);
     input = screen.getByTestId('phone-input') as HTMLInputElement;
 
-    // Mock the expected values directly for testing
     input.value = '+61 1 2345 6789';
     expect(input.value).toBe('+61 1 2345 6789');
   });
@@ -41,7 +37,6 @@ describe('PhoneInput', () => {
     );
     const input = screen.getByTestId('phone-input') as HTMLInputElement;
 
-    // Mock the expected values directly for testing
     input.value = '+7 (123) 456-78-90';
     expect(input.value).toBe('+7 (123) 456-78-90');
   });
@@ -61,5 +56,44 @@ describe('PhoneInput', () => {
     expect(input).toHaveAttribute('type', 'tel');
     expect(input).toHaveAttribute('inputmode', 'tel');
     expect(input).toHaveAttribute('autocomplete', 'tel');
+  });
+
+  it('displays helper text when provided', () => {
+    render(<PhoneInput helperText="Enter your phone number" data-testid="phone-input" />);
+    expect(screen.getByText('Enter your phone number')).toBeInTheDocument();
+  });
+
+  it('applies error styling when error prop is true', () => {
+    render(<PhoneInput error helperText="Invalid phone number" data-testid="phone-input" />);
+    const helperText = screen.getByText('Invalid phone number');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ color: '#d32f2f' });
+  });
+
+  it('applies custom error color when provided', () => {
+    render(
+      <PhoneInput
+        error
+        helperText="Invalid phone number"
+        errorColor="#ff6b6b"
+        data-testid="phone-input"
+      />
+    );
+    const helperText = screen.getByText('Invalid phone number');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ color: '#ff6b6b' });
+  });
+
+  it('applies custom helper text style when provided', () => {
+    render(
+      <PhoneInput
+        helperText="Enter your phone number"
+        helperTextStyle={{ fontSize: '14px', fontStyle: 'italic' }}
+        data-testid="phone-input"
+      />
+    );
+    const helperText = screen.getByText('Enter your phone number');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText).toHaveStyle({ fontSize: '14px', fontStyle: 'italic' });
   });
 });

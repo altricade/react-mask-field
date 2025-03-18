@@ -31,6 +31,18 @@ const meta = {
       control: 'text',
       description: 'Character to use as a placeholder for unfilled parts of the mask',
     },
+    error: {
+      control: 'boolean',
+      description: 'If true, the input will be marked as having an error',
+    },
+    helperText: {
+      control: 'text',
+      description: 'Helper text to display below the input',
+    },
+    errorColor: {
+      control: 'color',
+      description: 'Color for the error state border and text',
+    },
   },
 } satisfies Meta<typeof MaskField>;
 
@@ -83,6 +95,70 @@ export const ControlledInput = () => {
         placeholder="____-____-____"
       />
       <div style={{ marginTop: '10px' }}>Current value: {value}</div>
+    </div>
+  );
+};
+
+// Example with error state
+export const WithError: Story = {
+  args: {
+    mask: '(999) 999-9999',
+    placeholder: '(___) ___-____',
+    error: true,
+    helperText: 'Please enter a valid phone number',
+  },
+};
+
+// Example with helper text but no error
+export const WithHelperText: Story = {
+  args: {
+    mask: '(999) 999-9999',
+    placeholder: '(___) ___-____',
+    helperText: 'Enter your phone number',
+  },
+};
+
+// Example with custom error color
+export const CustomErrorColor: Story = {
+  args: {
+    mask: '(999) 999-9999',
+    placeholder: '(___) ___-____',
+    error: true,
+    errorColor: '#ff6b00',
+    helperText: 'Invalid phone number format',
+  },
+};
+
+// Example with validation
+export const WithValidation = () => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState(false);
+  const [helperText, setHelperText] = useState('Enter a phone number');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    // Simple validation - check if the input has the expected length
+    if (newValue.length > 0 && newValue.length < 14) {
+      setError(true);
+      setHelperText('Phone number is incomplete');
+    } else {
+      setError(false);
+      setHelperText('Enter a phone number');
+    }
+  };
+
+  return (
+    <div>
+      <MaskField
+        mask="(999) 999-9999"
+        value={value}
+        onChange={handleChange}
+        placeholder="(___) ___-____"
+        error={error}
+        helperText={helperText}
+      />
     </div>
   );
 };

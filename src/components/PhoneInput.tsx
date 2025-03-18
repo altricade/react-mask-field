@@ -33,7 +33,15 @@ const PhoneInputComponent: ForwardRefRenderFunction<HTMLInputElement, PhoneInput
       : PHONE_MASKS[countryCode as keyof typeof PHONE_MASKS] || PHONE_MASKS.US;
 
   // Filter out PhoneInput-specific props to avoid React DOM warnings
-  const { countryCode: _, customMask: __, ...restProps } = props as PhoneInputProps;
+  const {
+    countryCode: _,
+    customMask: __,
+    error,
+    helperText,
+    errorColor,
+    helperTextStyle,
+    ...restProps
+  } = props as PhoneInputProps;
 
   return (
     <MaskField
@@ -42,6 +50,10 @@ const PhoneInputComponent: ForwardRefRenderFunction<HTMLInputElement, PhoneInput
       type="tel"
       inputMode="tel"
       autoComplete="tel"
+      error={error}
+      helperText={helperText}
+      errorColor={errorColor}
+      helperTextStyle={helperTextStyle}
       {...restProps}
       ref={ref}
     />

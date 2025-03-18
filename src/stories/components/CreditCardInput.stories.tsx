@@ -114,3 +114,75 @@ export const ControlledCreditCardInput = () => {
     </div>
   );
 };
+
+// With error state
+export const WithError: Story = {
+  args: {
+    detectCardType: true,
+    error: true,
+    helperText: 'Please enter a valid credit card number',
+  },
+};
+
+// With custom error color
+export const WithCustomErrorColor: Story = {
+  args: {
+    detectCardType: true,
+    error: true,
+    helperText: 'Please enter a valid credit card number',
+    errorColor: '#ff6b6b',
+  },
+};
+
+// With helper text (no error)
+export const WithHelperText: Story = {
+  args: {
+    detectCardType: true,
+    helperText: 'Enter your 16-digit credit card number',
+  },
+};
+
+// With validation example
+export const WithValidation = () => {
+  const [cardValue, setCardValue] = useState('');
+  const [error, setError] = useState(false);
+  const [cardType, setCardType] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCardValue(value);
+    
+    // Simple validation: check if the card number has the right number of digits
+    // This is a basic check - in a real app you'd use the Luhn algorithm
+    const digitsOnly = value.replace(/\D/g, '');
+    
+    if (digitsOnly.length > 0) {
+      // Different card types have different valid lengths
+      if (cardType === 'amex') {
+        setError(digitsOnly.length !== 15);
+      } else {
+        setError(digitsOnly.length !== 16);
+      }
+    } else {
+      setError(false);
+    }
+  };
+
+  return (
+    <div>
+      <CreditCardInput
+        value={cardValue}
+        onChange={handleChange}
+        detectCardType={true}
+        onCardTypeChange={setCardType}
+        error={error}
+        helperText={error 
+          ? `Invalid card number for ${cardType || 'this card type'}` 
+          : 'Enter your credit card number'}
+      />
+      <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+        Card type: {cardType || 'None detected yet'}
+      </div>
+    </div>
+  );
+};
