@@ -14,5 +14,13 @@ const config = {
   docs: {
     autodocs: 'tag',
   },
+  // Add this for GitHub Pages deployment
+  viteFinal: (config) => {
+    // If deploying to GitHub Pages
+    if (process.env.NODE_ENV === 'production') {
+      config.base = '/react-mask-field/';
+    }
+    return config;
+  },
 };
 export default config;

@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 - Added official support for React 19
+- Added comprehensive Storybook documentation with interactive examples
+- Deployed Storybook to GitHub Pages for easy component exploration
 - Updated component implementations to use ForwardRefRenderFunction pattern for better type safety
 - Enhanced prop filtering across all components to prevent React DOM warnings
 

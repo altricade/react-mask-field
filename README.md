@@ -2,6 +2,11 @@
 
 A lightweight, flexible input masking library for React applications built with TypeScript. This library provides customizable masked input components with type safety and modern React practices.
 
+[![Storybook](https://img.shields.io/badge/Storybook-FF4785?style=for-the-badge&logo=storybook&logoColor=white)](https://altricade.github.io/react-mask-field/)
+[![npm version](https://img.shields.io/npm/v/@altricade/react-mask-field.svg?style=for-the-badge)](https://www.npmjs.com/package/@altricade/react-mask-field)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+
 ## Features
 
 - 🚀 **Modern React API** - Based on hooks and functional components
@@ -11,6 +16,22 @@ A lightweight, flexible input masking library for React applications built with 
 - 🎨 **Customizable** - Flexible formatting options
 - ⚛️ **Compatible** - Works with React 16.8+ including React 18 and React 19
 - 🛡️ **Clean DOM** - Properly filters out non-standard props from DOM elements
+- 📚 **Interactive Documentation** - Comprehensive [Storybook documentation](https://altricade.github.io/react-mask-field/) with live examples
+
+## Documentation
+
+Explore our interactive component documentation with live examples:
+
+[**View Storybook Documentation**](https://altricade.github.io/react-mask-field/)
+
+The Storybook provides:
+
+- Interactive examples of all components
+- Configurable props with live preview
+- Code snippets for common use cases
+- Detailed API documentation
+
+For information on building and deploying the Storybook, see [STORYBOOK.md](./STORYBOOK.md).
 
 ## Installation
 
