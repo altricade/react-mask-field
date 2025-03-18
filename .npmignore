@@ -1,0 +1,29 @@
+# Source files
+src/
+*.ts
+*.tsx
+!*.d.ts
+
+# Development files
+.git/
+.github/
+.vscode/
+node_modules/
+.eslintrc.js
+.prettierrc
+jest.config.js
+jest.setup.js
+rollup.config.js
+tsconfig.json
+
+# Test files
+__tests__/
+*.test.ts
+*.test.tsx
+
+# Documentation files that don't need to be in the package
+COMPONENTS.md
+TYPESCRIPT.md
+PROJECT_SUMMARY.md
+
+# Distribution files are included by the "files" field in package.json
