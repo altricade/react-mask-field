@@ -2,23 +2,75 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.3.0 (2025-03-18)
+## 1.3.0 (2026-11-25)
+
+The mask engine was rewritten. Most documented props (`formatChars`, `maskChar`, `alwaysShowMask`,
+`beforeMaskedValueChange`) were previously ignored by `MaskField`; they now work as documented.
+
+### Behaviour changes
+
+- `onChange` now receives the real event: `e.target` is the `<input>` element (previously a plain object
+  copy), so `e.target.name`, `e.target.id` and the other DOM properties work, as form libraries expect.
+- `onChange` no longer fires for rejected keystrokes (invalid characters, typing into a full mask).
+- `value` passed to `MaskField` is now conformed to the mask (`"123456"` with `999-999` renders `123-456`).
+- `MaskField` follows React's controlled semantics: if `value` is set and the parent ignores `onChange`, the
+  input keeps showing `value`. Leave `value` out (optionally with `defaultValue`) for uncontrolled use.
+- `PhoneInput` no longer forces `value=""`, so it works uncontrolled.
+- `useMask().rawValue` now contains only the typed characters (no literals).
+- `CreditCardInput`: the Amex mask is 15 digits (`9999 999999 99999`, previously 14); `maxLength` is no longer set.
+- `TimeInput`: the 12h mask is `99:99 am` (A/P then M) and `inputMode` is `text` in 12h mode so mobile users
+  can type AM/PM.
+
+### Bug fixes
+
+- **Masking and editing:**
+  - Typed digits are no longer swallowed by prefix literals (US `PhoneInput`: typing `1234567890` gave
+    `+1 (234) 567-890`).
+  - Backspace/Delete next to a separator no longer gets stuck; editing in the middle no longer moves the caret
+    to the end.
+  - Selection replace and paste in the middle work.
+- **Mask syntax:** escaped characters in masks (`\9`) work. The India mask `+91…` now escapes its `9` (the
+  placeholder showed `+_1`).
+- **Validation:**
+  - `DateInput` and `TimeInput` validation now actually runs (it was never invoked).
+  - `DateInput` no longer clamps Feb 29 to 28 before the year has been typed.
+  - `TimeInput` now clamps seconds in 24h mode.
+- **CreditCardInput:**
+  - The controlled `value` is followed after mount.
+  - A number pasted with a different card type is masked with the right mask.
+  - `onCardTypeChange` is no longer re-fired when the parent passes a new inline callback.
+- **MaskField DOM and styling:**
+  - A user `style` no longer removes the error border.
+  - `placeholderChar` and `placeholderColor` are no longer passed through to the DOM.
+  - Passing both `value` and `defaultValue` no longer reaches the DOM.
+- Removed hardcoded test-case shortcuts from the mask utilities.
 
 ### Features
 
-- Added error styling and helper text functionality to all input components:
-  - DateInput
-  - PhoneInput
-  - TimeInput
-  - CreditCardInput
-  - MaskField (previously implemented)
-- Added new props to all input components:
-  - `error`: Boolean to indicate if the input is in an error state
-  - `helperText`: Text to display below the input for guidance
-  - `errorColor`: Custom color for error state styling
-  - `helperTextStyle`: Custom styles for the helper text container
-- Added comprehensive Storybook examples showcasing error states and validation
-- Added tests for the new error and helper text functionality
+- `aria-invalid` when `error` is set; `helperText` is linked through `aria-describedby` when the input has an `id`.
+- `useMask` returns `placeholder` and `isComplete`.
+- Error styling and helper text (`error`, `helperText`, `errorColor`, `helperTextStyle`) on all components
+  (listed as 1.3.0 in an earlier changelog entry but published in 1.2.1).
+- Component prop types are exported: `PhoneInputProps`, `DateInputProps`, `TimeInputProps`,
+  `CreditCardInputProps`, `UseMaskProps`, `UseMaskResult`, and others.
+- AI-assistant documentation ships in the package: `llms.txt`, `llms-full.txt`, `skills/react-mask-field/SKILL.md`.
+
+### Performance
+
+- Masks are parsed once and cached by content, and pattern RegExps are compiled once. Previously a RegExp was
+  built for every character on every keystroke.
+- `useMask` handlers are referentially stable, even with inline `formatChars` or `beforeMaskedValueChange`.
+- `"sideEffects": false` is set for better tree-shaking.
+
+### Deprecated
+
+- `placeholderColor` (it never had an effect). Use CSS `::placeholder`.
+
+### Internal
+
+- Strict TypeScript (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) and type-aware ESLint (no `any`,
+  no type assertions, no non-null assertions). The `lint` script now actually lints every file.
+- Test suite rewritten around real user interaction (`@testing-library/user-event`), with 98%+ coverage.
 
 ## 1.2.0 (2025-03-18)
 
