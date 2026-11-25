@@ -1,0 +1,375 @@
+# @altricade/react-mask-field — complete reference for LLMs and coding agents
+
+> Input mask components for React (16.8–19), written in strict TypeScript, zero runtime dependencies.
+> Exports: MaskField, useMask, PhoneInput, DateInput, TimeInput, CreditCardInput, plus their prop types.
+> This file describes version 1.3.0 and later. Every example below is valid TypeScript.
+
+## Install and import
+
+```bash
+npm install @altricade/react-mask-field
+```
+
+```tsx
+import {
+  MaskField,
+  useMask,
+  PhoneInput,
+  DateInput,
+  TimeInput,
+  CreditCardInput,
+  type CardType,
+  type MaskFieldProps,
+  type BeforeMaskedValueChangeFunction,
+} from '@altricade/react-mask-field';
+```
+
+There is no default export, no CSS file to import, and no provider to set up.
+
+## Core rules (read these first)
+
+1. `onChange` receives a normal React `ChangeEvent<HTMLInputElement>`. `e.target` is the real `<input>`, and
+   `e.target.value` is the **masked** string, e.g. `"(555) 123-4567"`. `e.target.name` works.
+2. `value` / `defaultValue` may be masked **or** unmasked. `"5551234567"` and `"(555) 123-4567"` render identically.
+   So storing the masked value from `onChange` and passing it back is correct.
+3. `onChange` fires only when the masked value actually changes. Rejected keystrokes (a letter in a digit slot,
+   typing into a full mask) do not fire it.
+4. By default only typed characters are shown (`"(555) 12"`), and the mask template is the `placeholder`
+   (`"(___) ___-____"`). Pass `alwaysShowMask` to render the full template with `maskChar` in empty slots.
+5. To get the unmasked value, strip literals yourself (`e.target.value.replace(/\D/g, '')` for digit masks)
+   or use `useMask(...).rawValue`. There is no `onRawChange` prop.
+6. A format character inside a fixed prefix must be escaped with a backslash. In JS/TS strings the backslash
+   itself is escaped: `mask={'+\\91 99999 99999'}`. Without the escape, the `9` becomes a digit slot.
+7. All components forward `ref` to the underlying `<input>` and pass through every native input prop.
+8. An empty mask (`mask=""`) disables masking; the value passes through unchanged.
+
+## Mask syntax
+
+| Char          | Meaning                                    |
+| ------------- | ------------------------------------------ |
+| `9`           | one digit `[0-9]`                          |
+| `a`           | one letter `[A-Za-z]`                      |
+| `*`           | one letter or digit `[A-Za-z0-9]`          |
+| `\X`          | the character `X` as a literal             |
+| anything else | a literal, inserted automatically          |
+
+Custom format characters: `formatChars` maps a single mask character to a RegExp **source string** that is
+anchored and tested against exactly one input character. Passing `formatChars` replaces the defaults entirely,
+so include `'9'`, `'a'` and `'*'` yourself if you still need them.
+
+```tsx
+<MaskField mask="#hhhhhh" formatChars={{ h: '[0-9a-fA-F]' }} />          // "#ff0011"
+<MaskField mask="99:99" formatChars={{ '9': '[0-9]' }} />
+```
+
+Mask examples:
+
+- US phone `(999) 999-9999`
+- Date `99/99/9999`
+- Card `9999 9999 9999 9999`
+- Canadian postcode `a9a 9a9`
+- Licence plate `aaa-9999`
+- IBAN-like `aa99 **** **** ****`
+
+## MaskField
+
+```tsx
+function PhoneField() {
+  const [phone, setPhone] = useState('');
+  return (
+    <MaskField
+      mask="(999) 999-9999"
+      name="phone"
+      value={phone}
+      onChange={e => setPhone(e.target.value)}
+    />
+  );
+}
+```
+
+Uncontrolled:
+
+```tsx
+<MaskField mask="99/99/9999" defaultValue="12252023" ref={inputRef} />  // renders "12/25/2023"
+```
+
+Props (in addition to every native `<input>` prop):
+
+| Prop                      | Type                                           | Default        | Notes                                                        |
+| ------------------------- | ---------------------------------------------- | -------------- | ------------------------------------------------------------ |
+| `mask`                    | `string`                                       | required       | `''` disables masking                                        |
+| `value`                   | `string \| number`                             | —              | controlled; masked or unmasked                               |
+| `defaultValue`            | `string \| number`                             | —              | uncontrolled initial value                                   |
+| `onChange`                | `(e: ChangeEvent<HTMLInputElement>) => void`   | —              | `e.target.value` is masked                                   |
+| `maskChar`                | `string`                                       | `'_'`          | empty-slot char for `alwaysShowMask` and placeholder          |
+| `alwaysShowMask`          | `boolean`                                      | `false`        | always render the full template                              |
+| `formatChars`             | `Record<string, string>`                       | `9`, `a`, `*`  | replaces the defaults                                        |
+| `beforeMaskedValueChange` | `BeforeMaskedValueChangeFunction`              | —              | see below                                                    |
+| `placeholder`             | `string`                                       | mask template  | explicit placeholder wins                                    |
+| `placeholderChar`         | `string`                                       | `maskChar`     | char used in the generated placeholder                       |
+| `showPlaceholder`         | `boolean`                                      | `true`         | `false` = no generated placeholder                           |
+| `error`                   | `boolean`                                      | `false`        | red border + `aria-invalid="true"`                           |
+| `errorColor`              | `string`                                       | `'#d32f2f'`    | border and helper text colour when `error`                   |
+| `helperText`              | `ReactNode`                                    | —              | rendered below; linked by `aria-describedby` if `id` is set  |
+| `helperTextStyle`         | `CSSProperties`                                | —              | merged over the default helper style                         |
+| `placeholderColor`        | `string`                                       | —              | **deprecated, ignored**; use CSS `::placeholder`             |
+
+The rendered DOM is `<div style="display:flex;flex-direction:column;width:100%"><input/>[<div>helper</div>]</div>`.
+`style` and `className` go to the `<input>`. When `error` is true, `errorColor` overrides any `borderColor` in `style`.
+
+## beforeMaskedValueChange
+
+```ts
+type BeforeMaskedValueChangeFunction = (
+  newState: { value: string; selection: { start: number | null; end: number | null } },
+  oldState: { value: string; selection: { start: number | null; end: number | null } },
+  userInput: string | null, // inserted text; null for deletions
+  maskOptions: { mask: string; maskChar: string; formatChars: Record<string, string> }
+) => { value: string; selection: { start: number | null; end: number | null } };
+```
+
+It runs after every edit. The returned value is masked again, so it cannot produce an invalid value. Return
+`newState` unchanged to accept the edit.
+
+```tsx
+<MaskField
+  mask="aaa-999"
+  beforeMaskedValueChange={newState => ({ ...newState, value: newState.value.toUpperCase() })}
+/>
+```
+
+Memoise the callback with `useCallback` if it closes over state. Inline callbacks are fine; they don't cause
+extra work.
+
+## useMask (build your own input)
+
+```tsx
+function PostcodeInput() {
+  const [value, setValue] = useState('');
+  const mask = useMask({ mask: 'a9a 9a9', value });
+  return (
+    <input
+      value={mask.maskedValue}
+      placeholder={mask.placeholder}
+      onKeyDown={mask.handleKeyDown}
+      onChange={e => {
+        mask.handleChange(e); // writes the masked value to e.target.value and positions the caret
+        setValue(e.target.value);
+      }}
+    />
+  );
+}
+```
+
+`useMask(options)` takes `mask` and `value` (both required), plus the optional `maskChar`, `formatChars`,
+`alwaysShowMask`, `beforeMaskedValueChange`, `showPlaceholder` and `placeholderChar`.
+
+It returns:
+
+- `maskedValue` — the string to render
+- `rawValue` — only the user-filled characters, e.g. `"5551234567"`
+- `placeholder` — `string | undefined`
+- `isComplete` — `boolean`, true when every slot is filled
+- `handleChange(e)` — call it first in your `onChange`, then read `e.target.value`
+- `handleKeyDown(e)` — wire it to `onKeyDown` so Backspace/Delete over separators go the right way
+- `setInputValue(input, value)` and `setSelection(input, { start, end })`
+
+## PhoneInput
+
+```tsx
+<PhoneInput countryCode="US" value={phone} onChange={e => setPhone(e.target.value)} />
+```
+
+| Prop          | Type                                                       | Default  |
+| ------------- | ---------------------------------------------------------- | -------- |
+| `countryCode` | `'US' \| 'CA' \| 'UK' \| 'AU' \| 'IN' \| 'RU' \| 'custom'` | `'RU'`   |
+| `customMask`  | `string` (used with `'custom'`; falls back to US if absent) | —        |
+
+Masks per country:
+
+| Country | Mask                | Typing `1234567890` gives |
+| ------- | ------------------- | ------------------------- |
+| US, CA  | `+1 (999) 999-9999` | `+1 (123) 456-7890`       |
+| UK      | `+44 99 9999 9999`  |                           |
+| RU      | `+7 (999)999-9999`  |                           |
+| AU      | `+61 9 9999 9999`   |                           |
+| IN      | `+\91 99999 99999`  |                           |
+
+Typed digits are never swallowed by the country prefix. The default is **RU**, so pass `countryCode` explicitly.
+It sets `type="tel"`, `inputMode="tel"` and `autoComplete="tel"`, all of which you can override.
+
+## DateInput
+
+```tsx
+<DateInput format="DD/MM/YYYY" value={date} onChange={e => setDate(e.target.value)} />
+```
+
+| Prop                   | Type                                                                            | Default        |
+| ---------------------- | ------------------------------------------------------------------------------- | -------------- |
+| `format`               | `'MM/DD/YYYY' \| 'DD/MM/YYYY' \| 'YYYY-MM-DD' \| 'MM-DD-YYYY' \| 'DD-MM-YYYY'` | `'MM/DD/YYYY'` |
+| `separator`            | `'/' \| '-' \| '.'`                                                             | from `format`  |
+| `enableDateValidation` | `boolean`                                                                       | `true`         |
+
+Validation runs while typing and only on complete fields:
+
+- Month is clamped to `01–12` (`13` → `12`, `00` → `01`).
+- Day is clamped to `01` up to the length of the month (`04/31` → `04/30`).
+- Feb 29 is allowed until the year is complete, then becomes 28 in non-leap years (Gregorian rules: 1900 is not a
+  leap year, 2000 is).
+
+It does not check min/max dates; do that in your own code (e.g. on blur or submit). The value is a string, not a
+`Date`. There are no `minDate`/`maxDate` props.
+
+## TimeInput
+
+```tsx
+<TimeInput format="24h" showSeconds value={time} onChange={e => setTime(e.target.value)} />
+```
+
+| Prop                   | Type             | Default |
+| ---------------------- | ---------------- | ------- |
+| `format`               | `'12h' \| '24h'` | `'12h'` |
+| `showSeconds`          | `boolean`        | `false` |
+| `separator`            | `':' \| '.'`     | `':'`   |
+| `enableTimeValidation` | `boolean`        | `true`  |
+
+Masks: 12h `99:99 am` → `"09:30 AM"`; 24h `99:99`; with seconds `99:99:99[ am]`.
+
+- In 12h mode the user types the letters: `0930pm` → `09:30 PM`. The first letter slot accepts A/P, the second
+  accepts M, and validation upper-cases them.
+- Hours are clamped to `01–12` in 12h (`00` → `12`) and `00–23` in 24h. Minutes and seconds are clamped to `00–59`.
+- `inputMode` is `"text"` for 12h (the user needs letters for AM/PM) and `"numeric"` for 24h.
+
+## CreditCardInput
+
+```tsx
+const [cardType, setCardType] = useState<CardType | null>(null);
+<CreditCardInput value={card} onChange={e => setCard(e.target.value)} onCardTypeChange={setCardType} />
+```
+
+| Prop               | Type                               | Default |
+| ------------------ | ---------------------------------- | ------- |
+| `detectCardType`   | `boolean`                          | `true`  |
+| `cardType`         | `CardType` (forces type and mask)  | —       |
+| `onCardTypeChange` | `(type: CardType \| null) => void` | —       |
+
+`CardType = 'visa' | 'mastercard' | 'amex' | 'discover' | 'diners' | 'jcb' | 'unionpay' | 'other'`.
+
+Detection uses the number's prefix:
+
+| Type         | Prefixes                    |
+| ------------ | --------------------------- |
+| `visa`       | 4                           |
+| `mastercard` | 51–55, 22–27                |
+| `amex`       | 34, 37                      |
+| `discover`   | 6011, 65, 644–649, 622      |
+| `diners`     | 36, 38, 300–305             |
+| `jcb`        | 35                          |
+| `unionpay`   | 62                          |
+| `other`      | any other non-empty number  |
+| `null`       | empty field                 |
+
+Masks:
+
+| Type         | Mask                  | Digits     |
+| ------------ | --------------------- | ---------- |
+| `amex`       | `9999 999999 99999`   | 15 (4-6-5) |
+| `diners`     | `9999 999999 9999`    | 14 (4-6-4) |
+| all others   | `9999 9999 9999 9999` | 16         |
+
+`onCardTypeChange` fires once per actual change, including when a new controlled value arrives; it is not called
+again on re-renders. When a pasted number switches the card type, the value is re-masked with the new mask before
+`onChange` runs. The component does **not** run a Luhn checksum; validate it yourself if you need to.
+
+## Recipes
+
+### react-hook-form (use Controller — the inputs are controlled internally)
+
+```tsx
+<Controller
+  name="phone"
+  control={control}
+  rules={{ validate: v => v.replace(/\D/g, '').length === 10 || 'Enter 10 digits' }}
+  render={({ field, fieldState }) => (
+    <PhoneInput
+      countryCode="US"
+      {...field}
+      error={Boolean(fieldState.error)}
+      helperText={fieldState.error?.message}
+    />
+  )}
+/>
+```
+
+### Formik
+
+```tsx
+<MaskField mask="99/99/9999" name="dob" value={values.dob} onChange={handleChange} onBlur={handleBlur} />
+```
+
+`handleChange` reads `e.target.name`, which works because `e.target` is the real input.
+
+### Validation state and accessibility
+
+```tsx
+<DateInput
+  id="dob"
+  value={dob}
+  onChange={e => setDob(e.target.value)}
+  error={dob.length > 0 && dob.length < 10}
+  helperText="MM/DD/YYYY"
+/>
+```
+
+This sets `aria-invalid` and links the helper text with `aria-describedby="dob-helper-text"`. Add a `<label htmlFor="dob">` yourself.
+
+### Submitting unmasked digits
+
+```ts
+const digits = phone.replace(/\D/g, ''); // "+1 (555) 123-4567" -> "15551234567" (includes the country code)
+```
+
+For prefixed phone masks, drop the prefix explicitly. Or use `useMask({ mask, value }).rawValue`, which excludes
+all literals: `"5551234567"`.
+
+### Completeness check
+
+```tsx
+const { isComplete } = useMask({ mask: '9999 9999 9999 9999', value: card });
+```
+
+## Pitfalls (things models commonly get wrong)
+
+- **Don't** write `mask="+91 99999 99999"`: the `9` in `91` becomes a digit slot. Use `mask={'+\\91 99999 99999'}`.
+- **Don't** expect `onChange(value: string)`: it receives an event. Use `e.target.value`.
+- **Don't** set `maxLength`: the mask already limits length, and `maxLength` blocks typing when `alwaysShowMask`
+  is on.
+- **Don't** use `type="number"` or `type="email"`: browsers don't support caret control on them. Use the default
+  `type="text"`, or `type="tel"` (with `inputMode="numeric"`) for digits.
+- **Don't** pass a `formatChars` object that omits `'9'` and then use `9` in the mask: it becomes a literal.
+- **Don't** look for props that don't exist: `minDate`, `maxDate`, `CurrencyInput`, `onRawChange`, `guide`,
+  `keepCharPositions`, `mask` as an array or function. These come from other mask libraries.
+- `placeholderColor` is ignored. Style it with CSS: `input::placeholder { color: #999 }`.
+- A controlled input whose parent ignores `onChange` keeps showing the controlled value (normal React behaviour).
+- The default `countryCode` of `PhoneInput` is `'RU'`, not `'US'`.
+
+## Behaviour details
+
+- **Editing:**
+  - Typing in the middle shifts later characters right.
+  - Deleting shifts them left.
+  - Backspace right after a separator deletes the character before the separator; Delete right before one
+    deletes the character after it.
+  - Selecting text and typing replaces the selection.
+  - Paste accepts formatted or unformatted text and drops invalid characters.
+- **Caret:** set after each edit; it jumps past separators once the slot before them is filled. It is only moved
+  while the input has focus.
+- **SSR:** safe (`useLayoutEffect` falls back to `useEffect` on the server). Output is deterministic.
+- **Performance:** masks are parsed once and cached by content, so inline `formatChars` objects are fine. Each
+  edit is O(mask length).
+
+## Links
+
+- Repository: https://github.com/altricade/react-mask-field
+- Storybook: https://altricade.github.io/react-mask-field/
+- npm: https://www.npmjs.com/package/@altricade/react-mask-field

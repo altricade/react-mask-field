@@ -1,0 +1,27 @@
+# @altricade/react-mask-field
+
+> Input mask components for React 16.8–19 in strict TypeScript, with zero runtime dependencies. `MaskField` masks any `<input>` with patterns like `(999) 999-9999` (9 = digit, a = letter, * = alphanumeric, \ = escape). `PhoneInput`, `DateInput`, `TimeInput` and `CreditCardInput` add country formats, calendar/time validation and card-type detection. The `useMask` hook exposes the same engine for custom inputs.
+
+Key facts for correct usage:
+
+- `onChange` receives a standard React ChangeEvent; `e.target.value` is the masked string and `e.target.name` works.
+- `value`/`defaultValue` accept masked or unmasked strings. Only typed characters are shown unless `alwaysShowMask` is set.
+- Escape format characters in fixed prefixes: `mask={'+\\91 99999 99999'}`.
+- `PhoneInput` defaults to `countryCode="RU"`. There are no `CurrencyInput`, `minDate`/`maxDate` or array masks.
+- With react-hook-form, use `Controller`.
+
+## Docs
+
+- [Complete reference for LLMs](https://github.com/altricade/react-mask-field/blob/main/llms-full.txt): every prop, the behaviour rules, recipes (react-hook-form, Formik, validation) and common pitfalls, in one file
+- [README](https://github.com/altricade/react-mask-field/blob/main/README.md): human-oriented overview and API tables
+- [Agent skill](https://github.com/altricade/react-mask-field/blob/main/skills/react-mask-field/SKILL.md): drop-in skill for Claude Code and other agents (copy it to `.claude/skills/react-mask-field/`)
+
+## Examples
+
+- [Storybook](https://altricade.github.io/react-mask-field/): interactive examples of every component
+- [Documented examples as tests](https://github.com/altricade/react-mask-field/blob/main/src/__tests__/docs-examples.test.tsx): runnable versions of the README snippets
+
+## Optional
+
+- [Changelog](https://github.com/altricade/react-mask-field/blob/main/CHANGELOG.md): behaviour changes per version (1.3.0 rewrote the mask engine)
+- [Contributor guide for agents](https://github.com/altricade/react-mask-field/blob/main/AGENTS.md): architecture and conventions for working on the library itself
