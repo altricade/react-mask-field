@@ -1,22 +1,45 @@
-import React, { forwardRef, useCallback, ForwardRefRenderFunction } from 'react';
+import React, { forwardRef, useCallback } from 'react';
+import type { ForwardRefRenderFunction } from 'react';
+
 import { MaskField } from './MaskField';
-import type { MaskFieldProps, BeforeMaskedValueChangeFunction } from '../types';
+import type { BeforeMaskedValueChangeFunction, MaskFieldProps } from '../types';
+import { clampDateDigits, type DateOrder } from '../utils/dateTime';
+
+export type DateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD' | 'MM-DD-YYYY' | 'DD-MM-YYYY';
+export type DateSeparator = '/' | '-' | '.';
 
 export interface DateInputProps extends Omit<MaskFieldProps, 'mask'> {
   /**
-   * Date format to use - defaults to 'MM/DD/YYYY'
+   * Date format to use. Default `'MM/DD/YYYY'`.
    */
-  format?: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD' | 'MM-DD-YYYY' | 'DD-MM-YYYY';
+  format?: DateFormat | undefined;
 
   /**
-   * Separator character to use in the date format
+   * Separator character. Defaults to the separator in `format`.
    */
-  separator?: '/' | '-' | '.';
+  separator?: DateSeparator | undefined;
 
   /**
-   * Enable validation of the date as a valid calendar date
+   * Clamp month to 01-12 and day to the days of that month (leap years
+   * included) as the user types. Default true.
    */
-  enableDateValidation?: boolean;
+  enableDateValidation?: boolean | undefined;
+}
+
+function orderOf(format: DateFormat): DateOrder {
+  if (format.startsWith('MM')) return 'MDY';
+  if (format.startsWith('DD')) return 'DMY';
+  return 'YMD';
+}
+
+function getDateMask(format: DateFormat, separator?: DateSeparator): string {
+  const sep = separator ?? (format.includes('/') ? '/' : '-');
+  const groups: Record<DateOrder, readonly string[]> = {
+    MDY: ['99', '99', '9999'],
+    DMY: ['99', '99', '9999'],
+    YMD: ['9999', '99', '99'],
+  };
+  return groups[orderOf(format)].join(sep);
 }
 
 const DateInputComponent: ForwardRefRenderFunction<HTMLInputElement, DateInputProps> = (
@@ -29,116 +52,31 @@ const DateInputComponent: ForwardRefRenderFunction<HTMLInputElement, DateInputPr
   },
   ref
 ) => {
-  const getDateMask = useCallback(() => {
-    const sep = separator || (new RegExp('/').test(format) ? '/' : /-/.test(format) ? '-' : '.');
+  const mask = getDateMask(format, separator);
+  const order = orderOf(format);
 
-    const normalizedFormat = format.replace(/[/\-.]/g, sep);
-
-    return normalizedFormat.replace('MM', '99').replace('DD', '99').replace('YYYY', '9999');
-  }, [format, separator]);
-
-  const mask = getDateMask();
-
-  const handleBeforeMaskedValueChange: BeforeMaskedValueChangeFunction = useCallback(
+  const handleBeforeMaskedValueChange = useCallback<BeforeMaskedValueChangeFunction>(
     (newState, oldState, userInput, maskOptions) => {
-      let result = newState;
-      if (beforeMaskedValueChange) {
-        result = beforeMaskedValueChange(newState, oldState, userInput, maskOptions);
-      }
+      const result = beforeMaskedValueChange
+        ? beforeMaskedValueChange(newState, oldState, userInput, maskOptions)
+        : newState;
+      if (!enableDateValidation) return result;
 
-      if (!enableDateValidation) {
-        return result;
-      }
-
-      const value = result.value;
-      const sep = separator || (new RegExp('/').test(format) ? '/' : /-/.test(format) ? '-' : '.');
-      const parts = value.split(sep);
-
-      if (parts.length < 2) {
-        return result;
-      }
-
-      let year, month, day;
-
-      if (format.startsWith('MM')) {
-        [month, day, year] = parts;
-      } else if (format.startsWith('DD')) {
-        [day, month, year] = parts;
-      } else if (format.startsWith('YYYY')) {
-        [year, month, day] = parts;
-      }
-
-      const numMonth = month ? parseInt(month, 10) : NaN;
-      const numDay = day ? parseInt(day, 10) : NaN;
-      const numYear = year ? parseInt(year, 10) : NaN;
-
-      if (!isNaN(numMonth) && numMonth > 12) {
-        if (month) {
-          result.value = result.value.replace(
-            new RegExp(`${month.padStart(2, '0')}${sep}`),
-            `12${sep}`
-          );
-        }
-      }
-
-      if (!isNaN(numMonth) && !isNaN(numDay) && numMonth > 0 && numMonth <= 12) {
-        const maxDays = new Date(numYear || new Date().getFullYear(), numMonth, 0).getDate();
-
-        if (numDay > maxDays) {
-          if (format.indexOf('DD') < format.indexOf('MM')) {
-            if (day) {
-              result.value = result.value.replace(
-                new RegExp(`^${day.padStart(2, '0')}${sep}`),
-                `${maxDays.toString().padStart(2, '0')}${sep}`
-              );
-            }
-          } else {
-            if (day) {
-              result.value = result.value.replace(
-                new RegExp(`${sep}${day.padStart(2, '0')}($|${sep})`),
-                `${sep}${maxDays.toString().padStart(2, '0')}$1`
-              );
-            }
-          }
-        }
-      }
-
-      return result;
+      // The date mask is digits only, so the digits are the raw value. The
+      // returned value is re-conformed to the mask by MaskField.
+      const digits = result.value.replace(/\D/g, '');
+      return { ...result, value: clampDateDigits(digits, order) };
     },
-    [format, separator, enableDateValidation, beforeMaskedValueChange]
+    [beforeMaskedValueChange, enableDateValidation, order]
   );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (props.onChange) {
-      props.onChange(e);
-    }
-  };
-
-  // Filter out DateInput-specific props to avoid React DOM warnings
-  const {
-    format: _,
-    separator: __,
-    enableDateValidation: ___,
-    error,
-    helperText,
-    errorColor,
-    helperTextStyle,
-    ...restProps
-  } = props as DateInputProps;
 
   return (
     <MaskField
-      mask={mask}
-      placeholder={mask.replace(/9/g, '_')}
       inputMode="numeric"
       autoComplete="off"
+      {...props}
+      mask={mask}
       beforeMaskedValueChange={handleBeforeMaskedValueChange}
-      onChange={handleChange}
-      error={error}
-      helperText={helperText}
-      errorColor={errorColor}
-      helperTextStyle={helperTextStyle}
-      {...restProps}
       ref={ref}
     />
   );

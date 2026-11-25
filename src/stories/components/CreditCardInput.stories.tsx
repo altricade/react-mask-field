@@ -96,9 +96,13 @@ export const ControlledCreditCardInput = () => {
     <div>
       <CreditCardInput
         value={cardValue}
-        onChange={e => setCardValue(e.target.value)}
+        onChange={e => {
+          setCardValue(e.target.value);
+        }}
         detectCardType={true}
-        onCardTypeChange={type => setCardType(type)}
+        onCardTypeChange={type => {
+          setCardType(type);
+        }}
       />
       <div style={{ marginTop: '10px' }}>Current value: {cardValue}</div>
       <div style={{ marginTop: '5px' }}>Detected card type: {cardType || 'None'}</div>
@@ -151,11 +155,11 @@ export const WithValidation = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCardValue(value);
-    
+
     // Simple validation: check if the card number has the right number of digits
     // This is a basic check - in a real app you'd use the Luhn algorithm
     const digitsOnly = value.replace(/\D/g, '');
-    
+
     if (digitsOnly.length > 0) {
       // Different card types have different valid lengths
       if (cardType === 'amex') {
@@ -176,9 +180,11 @@ export const WithValidation = () => {
         detectCardType={true}
         onCardTypeChange={setCardType}
         error={error}
-        helperText={error 
-          ? `Invalid card number for ${cardType || 'this card type'}` 
-          : 'Enter your credit card number'}
+        helperText={
+          error
+            ? `Invalid card number for ${cardType || 'this card type'}`
+            : 'Enter your credit card number'
+        }
       />
       <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
         Card type: {cardType || 'None detected yet'}

@@ -94,7 +94,9 @@ export const ControlledDateInput = () => {
         format="MM/DD/YYYY"
         separator="/"
         value={date}
-        onChange={e => setDate(e.target.value)}
+        onChange={e => {
+          setDate(e.target.value);
+        }}
         enableDateValidation={true}
       />
       <div style={{ marginTop: '10px' }}>Current value: {date}</div>
@@ -143,22 +145,13 @@ export const WithValidation = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setDate(value);
-    
+
     // Simple validation: check if the date is complete and valid
     if (value.length === 10) {
-      const parts = value.split('/');
-      if (parts.length === 3) {
-        const month = parseInt(parts[0], 10);
-        const day = parseInt(parts[1], 10);
-        const year = parseInt(parts[2], 10);
-        
-        const isValid = 
-          month >= 1 && month <= 12 &&
-          day >= 1 && day <= 31 &&
-          year >= 1900 && year <= 2100;
-        
-        setError(!isValid);
-      }
+      const [month = NaN, day = NaN, year = NaN] = value.split('/').map(part => parseInt(part, 10));
+      const isValid =
+        month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100;
+      setError(!isValid);
     } else {
       setError(false);
     }

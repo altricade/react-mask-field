@@ -114,7 +114,9 @@ export const ControlledTimeInput = () => {
         showSeconds={false}
         separator=":"
         value={time}
-        onChange={e => setTime(e.target.value)}
+        onChange={e => {
+          setTime(e.target.value);
+        }}
         enableTimeValidation={true}
       />
       <div style={{ marginTop: '10px' }}>Current value: {time}</div>
@@ -166,9 +168,10 @@ export const WithValidation = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setTime(value);
-    
+
     // Simple validation: check if the time format is valid
-    if (value.length >= 8) { // At least HH:MM AM/PM
+    if (value.length >= 8) {
+      // At least HH:MM AM/PM
       const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?[AaPp][Mm]$/;
       setError(!timeRegex.test(value));
     } else {

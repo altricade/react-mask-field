@@ -1,4 +1,4 @@
-import { InputHTMLAttributes } from 'react';
+import type { ChangeEvent, CSSProperties, InputHTMLAttributes, ReactNode } from 'react';
 
 export type FormatChars = {
   [key: string]: string;
@@ -21,9 +21,9 @@ export type BeforeMaskedValueChangeFunction = (
   },
   userInput: string | null,
   maskOptions: {
-    mask: string | Array<string | RegExp>;
+    mask: string;
     maskChar: string;
-    formatChars?: FormatChars;
+    formatChars: FormatChars;
   }
 ) => {
   value: string;
@@ -33,78 +33,96 @@ export type BeforeMaskedValueChangeFunction = (
   };
 };
 
-export interface MaskFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+export interface MaskFieldProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'placeholder'> {
   /**
    * Mask pattern. Default format characters are:
    * - 9: 0-9
    * - a: A-Z, a-z
    * - *: A-Z, a-z, 0-9
-   * Any character can be escaped with backslash, e.g. \9
+   * Any character can be escaped with a backslash to make it literal, e.g. `+\\91 99999 99999`.
+   * An empty mask disables masking.
    */
   mask: string;
 
   /**
-   * Character to cover unfilled parts of the mask. Default character is "_".
-   * If set to null or empty string, unfilled parts will be empty.
+   * Value — controlled when provided. Accepts masked (`(555) 123-4567`) or
+   * unmasked (`5551234567`) strings; it is always rendered conformed to the mask.
    */
-  maskChar?: string;
+  value?: string | number | readonly string[] | undefined;
 
   /**
-   * Defines format characters with a key-value map where keys are characters
-   * and values are their corresponding RegExp strings.
-   * Default: { '9': '[0-9]', 'a': '[A-Za-z]', '*': '[A-Za-z0-9]' }
+   * Character shown in empty slots when `alwaysShowMask` is on, and the default
+   * character of the generated placeholder. Default `_`. Only the first
+   * character is used. It should not be a character users can type into a slot.
    */
-  formatChars?: FormatChars;
+  maskChar?: string | undefined;
 
   /**
-   * Show mask when input is empty and has no focus.
+   * Map of mask characters to single-character RegExp sources. Each pattern is
+   * anchored and tested against one character.
+   * Default: `{ '9': '[0-9]', 'a': '[A-Za-z]', '*': '[A-Za-z0-9]' }`
    */
-  alwaysShowMask?: boolean;
+  formatChars?: Readonly<FormatChars> | undefined;
 
   /**
-   * Function that is called before masked value is changed.
-   * Can be used to modify the masked value or selection.
+   * Render the whole mask (empty slots as `maskChar`) at all times. By default
+   * only what was typed is rendered and the mask shows as the placeholder.
    */
-  beforeMaskedValueChange?: BeforeMaskedValueChangeFunction;
+  alwaysShowMask?: boolean | undefined;
 
   /**
-   * Called when input value changes.
+   * Called after each edit, before the value is applied. Return a new state to
+   * change the value or selection; the returned value is re-conformed to the mask.
    */
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  beforeMaskedValueChange?: BeforeMaskedValueChangeFunction | undefined;
 
   /**
-   * Character used for placeholders in mask pattern.
+   * Called when the value changes. `event.target` is the real input element, so
+   * `event.target.value` is the masked value and `event.target.name` is preserved.
    */
-  placeholderChar?: string;
+  onChange?: ((event: ChangeEvent<HTMLInputElement>) => void) | undefined;
 
   /**
-   * Show a placeholder with a different color for unfilled positions.
+   * Placeholder text. Defaults to the mask template, e.g. `(___) ___-____`.
    */
-  showPlaceholder?: boolean;
+  placeholder?: string | undefined;
 
   /**
-   * Color for the placeholder characters.
+   * Character used in the generated placeholder. Defaults to `maskChar`.
    */
-  placeholderColor?: string;
+  placeholderChar?: string | undefined;
 
   /**
-   * If true, the input will be marked as having an error.
+   * Generate a placeholder from the mask when `placeholder` is not set. Default true.
    */
-  error?: boolean;
+  showPlaceholder?: boolean | undefined;
 
   /**
-   * Helper text to display below the input.
+   * @deprecated Has never had an effect and is ignored. Style the placeholder
+   * with the CSS `::placeholder` pseudo-element instead.
    */
-  helperText?: React.ReactNode;
+  placeholderColor?: string | undefined;
 
   /**
-   * Color for the error state border and text.
-   * Default is '#d32f2f' (red).
+   * Marks the input as invalid: applies `errorColor` to the border and helper
+   * text and sets `aria-invalid`.
    */
-  errorColor?: string;
+  error?: boolean | undefined;
+
+  /**
+   * Helper text displayed below the input. When the input has an `id`, it is
+   * linked through `aria-describedby`.
+   */
+  helperText?: ReactNode | undefined;
+
+  /**
+   * Colour for the error border and helper text. Default `#d32f2f`.
+   */
+  errorColor?: string | undefined;
 
   /**
    * Custom styles for the helper text container.
    */
-  helperTextStyle?: React.CSSProperties;
+  helperTextStyle?: CSSProperties | undefined;
 }
