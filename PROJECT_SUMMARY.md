@@ -1,5 +1,7 @@
 # React Mask Field - Project Improvements Summary
 
+> **Historical document.** It describes the implementation before 1.3.0, including practices this repo no longer allows (such as type assertions). For the current architecture and conventions, see [AGENTS.md](./AGENTS.md); for changes, see [CHANGELOG.md](./CHANGELOG.md).
+
 ## Overview
 
 This document provides a comprehensive summary of the improvements made to the React Mask Field library, focusing on TypeScript enhancements, build system fixes, and overall code quality improvements.

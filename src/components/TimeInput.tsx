@@ -1,27 +1,45 @@
-import React, { forwardRef, useCallback, ForwardRefRenderFunction } from 'react';
+import React, { forwardRef, useCallback } from 'react';
+import type { ForwardRefRenderFunction } from 'react';
+
 import { MaskField } from './MaskField';
-import type { MaskFieldProps, BeforeMaskedValueChangeFunction } from '../types';
+import type { BeforeMaskedValueChangeFunction, FormatChars, MaskFieldProps } from '../types';
+import { clampTimeRaw, type TimeFormat } from '../utils/dateTime';
+
+export type TimeSeparator = ':' | '.';
 
 export interface TimeInputProps extends Omit<MaskFieldProps, 'mask'> {
   /**
-   * Time format to use
+   * Time format. Default `'12h'` (with an AM/PM suffix).
    */
-  format?: '12h' | '24h';
+  format?: TimeFormat | undefined;
 
   /**
-   * Whether to show seconds
+   * Whether to include seconds. Default false.
    */
-  showSeconds?: boolean;
+  showSeconds?: boolean | undefined;
 
   /**
-   * Separator character to use between hours, minutes, and seconds
+   * Separator between hours, minutes and seconds. Default `':'`.
    */
-  separator?: ':' | '.';
+  separator?: TimeSeparator | undefined;
 
   /**
-   * Enable validation of time values (e.g., hours 0-23, minutes 0-59)
+   * Clamp hours (00-23, or 01-12 for 12h), minutes and seconds (00-59) as the
+   * user types, and upper-case AM/PM. Default true.
    */
-  enableTimeValidation?: boolean;
+  enableTimeValidation?: boolean | undefined;
+}
+
+/** `a` = A/P, `m` = M — so "AM"/"PM" can be typed in the two letter slots. */
+const TIME_FORMAT_CHARS: Readonly<FormatChars> = Object.freeze({
+  '9': '[0-9]',
+  a: '[aApP]',
+  m: '[mM]',
+});
+
+function getTimeMask(format: TimeFormat, showSeconds: boolean, separator: TimeSeparator): string {
+  const base = showSeconds ? `99${separator}99${separator}99` : `99${separator}99`;
+  return format === '12h' ? `${base} am` : base;
 }
 
 const TimeInputComponent: ForwardRefRenderFunction<HTMLInputElement, TimeInputProps> = (
@@ -35,125 +53,30 @@ const TimeInputComponent: ForwardRefRenderFunction<HTMLInputElement, TimeInputPr
   },
   ref
 ) => {
-  const getTimeMask = useCallback(() => {
-    const is12Hour = format === '12h';
-    const hoursMask = '99';
-    const baseFormat = `${hoursMask}${separator}99`;
+  const mask = getTimeMask(format, showSeconds, separator);
 
-    if (showSeconds) {
-      return `${baseFormat}${separator}99${is12Hour ? ' aa' : ''}`;
-    }
-
-    return is12Hour ? `${baseFormat} aa` : baseFormat;
-  }, [format, showSeconds, separator]);
-
-  const mask = getTimeMask();
-
-  const handleBeforeMaskedValueChange: BeforeMaskedValueChangeFunction = useCallback(
+  const handleBeforeMaskedValueChange = useCallback<BeforeMaskedValueChangeFunction>(
     (newState, oldState, userInput, maskOptions) => {
-      let result = newState;
-      if (beforeMaskedValueChange) {
-        result = beforeMaskedValueChange(newState, oldState, userInput, maskOptions);
-      }
+      const result = beforeMaskedValueChange
+        ? beforeMaskedValueChange(newState, oldState, userInput, maskOptions)
+        : newState;
+      if (!enableTimeValidation) return result;
 
-      if (!enableTimeValidation) {
-        return result;
-      }
-
-      const value = result.value;
-
-      let match;
-      if (format === '12h') {
-        match = value.match(
-          new RegExp(
-            `^(\\d{1,2})\\${separator}(\\d{1,2})(?:\\${separator}(\\d{1,2}))?(\\s+([aApP][mM]))?`
-          )
-        );
-      } else {
-        match = value.match(
-          new RegExp(`^(\\d{1,2})\\${separator}(\\d{1,2})(?:\\${separator}(\\d{1,2}))?`)
-        );
-      }
-
-      if (!match) {
-        return result;
-      }
-
-      const [, hours, minutes, seconds, , ampm] = match;
-
-      const maxHours = format === '24h' ? 23 : 12;
-      const hourValue = parseInt(hours, 10);
-
-      if (hourValue > maxHours) {
-        result.value = result.value.replace(
-          new RegExp(`^${hours.padStart(2, '0')}`),
-          maxHours.toString().padStart(2, '0')
-        );
-      } else if (format === '12h' && hourValue === 0) {
-        result.value = result.value.replace(/^00/, '12');
-      }
-
-      if (minutes && parseInt(minutes, 10) > 59) {
-        result.value = result.value.replace(
-          new RegExp(`\\${separator}${minutes.padStart(2, '0')}`),
-          `${separator}59`
-        );
-      }
-
-      if (seconds && parseInt(seconds, 10) > 59) {
-        result.value = result.value.replace(
-          new RegExp(`\\${separator}${seconds.padStart(2, '0')}\\s`),
-          `${separator}59 `
-        );
-      }
-
-      if (format === '12h' && ampm) {
-        if (!['am', 'pm', 'AM', 'PM'].includes(ampm)) {
-          result.value = result.value.replace(/\s+[a-zA-Z]+$/, ' AM');
-        }
-      }
-
-      return result;
+      // Strip separators/placeholders to get the raw value; MaskField re-conforms the result.
+      const raw = result.value.replace(/[^0-9A-Za-z]/g, '');
+      return { ...result, value: clampTimeRaw(raw, format, showSeconds) };
     },
-    [format, separator, enableTimeValidation, beforeMaskedValueChange]
+    [beforeMaskedValueChange, enableTimeValidation, format, showSeconds]
   );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (props.onChange) {
-      props.onChange(e);
-    }
-  };
-
-  // Filter out TimeInput-specific props to avoid React DOM warnings
-  const {
-    format: _,
-    showSeconds: __,
-    separator: ___,
-    enableTimeValidation: ____,
-    error,
-    helperText,
-    errorColor,
-    helperTextStyle,
-    ...restProps
-  } = props as TimeInputProps;
 
   return (
     <MaskField
-      mask={mask}
-      placeholder={mask.replace(/9/g, '_').replace(/a/g, '_')}
-      inputMode="numeric"
+      inputMode={format === '12h' ? 'text' : 'numeric'}
       autoComplete="off"
+      formatChars={TIME_FORMAT_CHARS}
+      {...props}
+      mask={mask}
       beforeMaskedValueChange={handleBeforeMaskedValueChange}
-      formatChars={{
-        '9': '[0-9]',
-        a: '[aApP]',
-      }}
-      onChange={handleChange}
-      error={error}
-      helperText={helperText}
-      errorColor={errorColor}
-      helperTextStyle={helperTextStyle}
-      {...restProps}
       ref={ref}
     />
   );

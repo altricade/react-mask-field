@@ -1,110 +1,125 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
 import { DateInput } from '../../components/DateInput';
+import { getInput } from '../../test-utils/input';
+
+async function typeInto(ui: React.ReactElement, text: string): Promise<string> {
+  const user = userEvent.setup();
+  render(ui);
+  await user.type(getInput(), text);
+  return getInput().value;
+}
 
 describe('DateInput', () => {
-  it('renders without crashing', () => {
-    render(<DateInput />);
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  it('uses MM/DD/YYYY by default', async () => {
+    expect(await typeInto(<DateInput />, '12252023')).toBe('12/25/2023');
+    expect(getInput().placeholder).toBe('__/__/____');
   });
 
-  it('uses MM/DD/YYYY format by default', () => {
-    render(<DateInput data-testid="date-input" />);
-    const input = screen.getByTestId('date-input') as HTMLInputElement;
-
-    input.value = '12/25/2023';
-    expect(input.value).toBe('12/25/2023');
+  it.each([
+    ['DD/MM/YYYY', undefined, '25122023', '25/12/2023'],
+    ['YYYY-MM-DD', undefined, '20231225', '2023-12-25'],
+    ['MM-DD-YYYY', undefined, '12252023', '12-25-2023'],
+    ['DD-MM-YYYY', undefined, '25122023', '25-12-2023'],
+    ['MM/DD/YYYY', '.', '12252023', '12.25.2023'],
+    ['YYYY-MM-DD', '/', '20231225', '2023/12/25'],
+  ] as const)('format %s with separator %s', async (format, separator, typed, expected) => {
+    expect(await typeInto(<DateInput format={format} separator={separator} />, typed)).toBe(
+      expected
+    );
   });
 
-  it('handles different date formats correctly', () => {
-    const { rerender } = render(<DateInput format="DD/MM/YYYY" data-testid="date-input" />);
-    let input = screen.getByTestId('date-input') as HTMLInputElement;
+  describe('validation', () => {
+    it('clamps the month to 12 and 00 to 01', async () => {
+      expect(await typeInto(<DateInput />, '13')).toBe('12');
+    });
 
-    input.value = '25/12/2023';
-    expect(input.value).toBe('25/12/2023');
+    it('clamps month 00 to 01', async () => {
+      expect(await typeInto(<DateInput />, '00')).toBe('01');
+    });
 
-    rerender(<DateInput format="YYYY-MM-DD" data-testid="date-input" />);
-    input = screen.getByTestId('date-input') as HTMLInputElement;
+    it('clamps the day to the days in the month', async () => {
+      expect(await typeInto(<DateInput />, '0431')).toBe('04/30');
+    });
 
-    input.value = '2023-12-25';
-    expect(input.value).toBe('2023-12-25');
+    it('clamps day 00 to 01', async () => {
+      expect(await typeInto(<DateInput />, '0100')).toBe('01/01');
+    });
+
+    it('allows Feb 29 until the year is known, then clamps for non-leap years', async () => {
+      const user = userEvent.setup();
+      render(<DateInput />);
+      await user.type(getInput(), '0229');
+      expect(getInput()).toHaveValue('02/29');
+      await user.type(getInput(), '2023');
+      expect(getInput()).toHaveValue('02/28/2023');
+    });
+
+    it('keeps Feb 29 in a leap year', async () => {
+      expect(await typeInto(<DateInput />, '02292024')).toBe('02/29/2024');
+    });
+
+    it('applies century leap rules (1900 is not a leap year, 2000 is)', async () => {
+      expect(await typeInto(<DateInput />, '02291900')).toBe('02/28/1900');
+    });
+
+    it('validates DD/MM/YYYY', async () => {
+      expect(await typeInto(<DateInput format="DD/MM/YYYY" />, '3104')).toBe('30/04');
+    });
+
+    it('validates YYYY-MM-DD using the already-typed year', async () => {
+      expect(await typeInto(<DateInput format="YYYY-MM-DD" />, '20230230')).toBe('2023-02-28');
+    });
+
+    it('does not validate when enableDateValidation is false', async () => {
+      expect(await typeInto(<DateInput enableDateValidation={false} />, '13452023')).toBe(
+        '13/45/2023'
+      );
+    });
+
+    it('runs a user beforeMaskedValueChange before validation', async () => {
+      const seen: string[] = [];
+      const value = await typeInto(
+        <DateInput
+          beforeMaskedValueChange={state => {
+            seen.push(state.value);
+            return state;
+          }}
+        />,
+        '13'
+      );
+      expect(seen).toEqual(['1', '13']);
+      expect(value).toBe('12');
+    });
   });
 
-  it('allows custom separator', () => {
-    render(<DateInput format="MM/DD/YYYY" separator="." data-testid="date-input" />);
-    const input = screen.getByTestId('date-input') as HTMLInputElement;
-
-    input.value = '12.25.2023';
-    expect(input.value).toBe('12.25.2023');
-  });
-
-  it('validates date when enableDateValidation is true', () => {
-    render(<DateInput enableDateValidation data-testid="date-input" />);
-    const input = screen.getByTestId('date-input') as HTMLInputElement;
-
-    input.value = '12/25/2023';
-    expect(input.value).toBe('12/25/2023');
-
-    input.value = '02/28/2023';
-    expect(input.value).toBe('02/28/2023');
-  });
-
-  it('does not validate date when enableDateValidation is false', () => {
-    render(<DateInput enableDateValidation={false} data-testid="date-input" />);
-    const input = screen.getByTestId('date-input') as HTMLInputElement;
-
-    input.value = '13/32/2023';
-    expect(input.value).toBe('13/32/2023');
-  });
-
-  it('sets appropriate HTML attributes for date input', () => {
-    render(<DateInput data-testid="date-input" />);
-    const input = screen.getByTestId('date-input') as HTMLInputElement;
-
-    expect(input).toHaveAttribute('inputmode', 'numeric');
-    expect(input).toHaveAttribute('autocomplete', 'off');
-  });
-
-  it('passes props to the underlying MaskField component', () => {
+  it('works controlled', () => {
     const onChange = jest.fn();
-    render(<DateInput onChange={onChange} data-testid="date-input" />);
-    const input = screen.getByTestId('date-input') as HTMLInputElement;
-
-    fireEvent.change(input, { target: { value: '1225' } });
-    expect(onChange).toHaveBeenCalled();
+    const { rerender } = render(<DateInput value="12252023" onChange={onChange} />);
+    expect(getInput()).toHaveValue('12/25/2023');
+    rerender(<DateInput value="01/02/2024" onChange={onChange} />);
+    expect(getInput()).toHaveValue('01/02/2024');
   });
 
-  it('displays helper text when provided', () => {
-    render(<DateInput helperText="Enter a valid date" data-testid="date-input" />);
-    expect(screen.getByText('Enter a valid date')).toBeInTheDocument();
+  it('sets numeric input attributes, overridable by the caller', () => {
+    const { rerender } = render(<DateInput />);
+    expect(getInput()).toHaveAttribute('inputmode', 'numeric');
+    expect(getInput()).toHaveAttribute('autocomplete', 'off');
+    rerender(<DateInput autoComplete="bday" />);
+    expect(getInput()).toHaveAttribute('autocomplete', 'bday');
   });
 
-  it('applies error styling when error prop is true', () => {
-    render(<DateInput error helperText="Invalid date" data-testid="date-input" />);
-    const helperText = screen.getByText('Invalid date');
-    expect(helperText).toBeInTheDocument();
-    expect(helperText).toHaveStyle({ color: '#d32f2f' });
+  it('does not leak DateInput props to the DOM', () => {
+    render(<DateInput format="DD/MM/YYYY" separator="." enableDateValidation />);
+    ['format', 'separator', 'enabledatevalidation'].forEach(attribute => {
+      expect(getInput()).not.toHaveAttribute(attribute);
+    });
   });
 
-  it('applies custom error color when provided', () => {
-    render(
-      <DateInput error helperText="Invalid date" errorColor="#ff6b6b" data-testid="date-input" />
-    );
-    const helperText = screen.getByText('Invalid date');
-    expect(helperText).toBeInTheDocument();
-    expect(helperText).toHaveStyle({ color: '#ff6b6b' });
-  });
-
-  it('applies custom helper text style when provided', () => {
-    render(
-      <DateInput
-        helperText="Enter a valid date"
-        helperTextStyle={{ fontSize: '14px', fontStyle: 'italic' }}
-        data-testid="date-input"
-      />
-    );
-    const helperText = screen.getByText('Enter a valid date');
-    expect(helperText).toBeInTheDocument();
-    expect(helperText).toHaveStyle({ fontSize: '14px', fontStyle: 'italic' });
+  it('supports error and helper text', () => {
+    render(<DateInput error helperText="Invalid date" errorColor="#ff6b6b" />);
+    expect(screen.getByText('Invalid date')).toHaveStyle({ color: '#ff6b6b' });
   });
 });

@@ -1,5 +1,17 @@
-import React, { forwardRef, useState, useEffect, ForwardRefRenderFunction } from 'react';
-import { MaskFieldProps } from '../types';
+import React, { forwardRef, useState } from 'react';
+import type { CSSProperties, ChangeEvent, KeyboardEvent, ForwardRefRenderFunction } from 'react';
+
+import { useMask } from '../hooks/useMask';
+import type { MaskFieldProps } from '../types';
+
+const DEFAULT_ERROR_COLOR = '#d32f2f';
+const CONTAINER_STYLE: CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%' };
+
+function toStringValue(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (Array.isArray(value)) return value.map(String).join('');
+  return String(value);
+}
 
 const MaskFieldComponent: ForwardRefRenderFunction<HTMLInputElement, MaskFieldProps> = (
   props,
@@ -7,114 +19,100 @@ const MaskFieldComponent: ForwardRefRenderFunction<HTMLInputElement, MaskFieldPr
 ) => {
   const {
     mask,
-    value = '',
+    value,
+    defaultValue,
     onChange,
-    formatChars: _formatChars, // Extract but don't pass to DOM
-    beforeMaskedValueChange: _beforeMaskedValueChange, // Extract but don't pass to DOM
-    maskChar: _maskChar, // Extract but don't pass to DOM
-    alwaysShowMask: _alwaysShowMask, // Extract but don't pass to DOM
+    onKeyDown,
+    formatChars,
+    beforeMaskedValueChange,
+    maskChar,
+    alwaysShowMask,
+    placeholderChar,
+    showPlaceholder,
+    placeholderColor: _placeholderColor, // deprecated no-op; never forwarded to the DOM
+    placeholder,
     error = false,
     helperText,
-    errorColor = '#d32f2f',
+    errorColor = DEFAULT_ERROR_COLOR,
     helperTextStyle,
-    ...restProps
+    style,
+    id,
+    'aria-describedby': ariaDescribedBy,
+    'aria-invalid': ariaInvalid,
+    ...inputProps
   } = props;
 
-  const [inputValue, setInputValue] = useState(value as string);
+  const isControlled = value !== undefined;
+  const [uncontrolledValue, setUncontrolledValue] = useState(() => toStringValue(defaultValue));
+  const currentValue = isControlled ? toStringValue(value) : uncontrolledValue;
 
-  const placeholder = mask ? mask.replace(/9/g, '_') : '';
+  const masked = useMask({
+    mask,
+    value: currentValue,
+    maskChar,
+    formatChars,
+    alwaysShowMask,
+    beforeMaskedValueChange,
+    showPlaceholder,
+    placeholderChar,
+  });
 
-  useEffect(() => {
-    setInputValue(value as string);
-  }, [value]);
-
-  const processMaskedInput = (rawInput: string): string => {
-    if (!mask) return rawInput;
-
-    const extractedChars: string[] = [];
-    let maskIndex = 0;
-
-    for (let i = 0; i < rawInput.length && maskIndex < mask.length; i++) {
-      const char = rawInput[i];
-      const currentMaskChar = mask[maskIndex];
-
-      if (currentMaskChar === '9') {
-        if (/\d/.test(char)) {
-          extractedChars.push(char);
-          maskIndex++;
-        }
-      } else if (currentMaskChar === 'a') {
-        if (/[A-Za-z]/.test(char)) {
-          extractedChars.push(char);
-          maskIndex++;
-        }
-      } else if (currentMaskChar === '*') {
-        if (/[A-Za-z0-9]/.test(char)) {
-          extractedChars.push(char);
-          maskIndex++;
-        }
-      } else {
-        if (char === currentMaskChar) {
-          extractedChars.push(char);
-          maskIndex++;
-        } else {
-          extractedChars.push(currentMaskChar);
-          maskIndex++;
-          i--;
-        }
-      }
-    }
-
-    return extractedChars.join('');
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    masked.handleChange(e);
+    // A rejected keystroke (invalid char, full mask) leaves the value unchanged: no onChange.
+    if (e.target.value === masked.maskedValue) return;
+    if (!isControlled) setUncontrolledValue(e.target.value);
+    onChange?.(e);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    const maskedValue = processMaskedInput(rawValue);
-
-    setInputValue(maskedValue);
-
-    if (onChange) {
-      const newEvent = { ...e };
-      Object.defineProperty(newEvent, 'target', {
-        writable: true,
-        value: { ...e.target, value: maskedValue },
-      });
-      onChange(newEvent as React.ChangeEvent<HTMLInputElement>);
-    }
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    masked.handleKeyDown(e);
+    onKeyDown?.(e);
   };
 
-  // Memoize styles to avoid recreating objects on each render
-  const inputStyle = error
+  // The error colour always wins over a user border colour; other user styles are kept.
+  const inputStyle: CSSProperties | undefined = error
     ? {
-        borderColor: errorColor,
         borderWidth: '1px',
         borderStyle: 'solid',
         outline: 'none',
-        ...(restProps.style || {}),
+        ...style,
+        borderColor: errorColor,
       }
-    : restProps.style;
+    : style;
 
-  const helperTextContainerStyle = {
-    marginTop: '4px',
-    fontSize: '0.75rem',
-    lineHeight: '1.66',
-    color: error ? errorColor : 'rgba(0, 0, 0, 0.6)',
-    ...helperTextStyle,
-  };
+  const helperId = helperText && id ? `${id}-helper-text` : undefined;
+  const describedBy = [ariaDescribedBy, helperId].filter(Boolean).join(' ') || undefined;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <div style={CONTAINER_STYLE}>
       <input
-        ref={ref}
         type="text"
-        value={inputValue}
-        placeholder={placeholder}
+        {...inputProps}
+        ref={ref}
+        id={id}
+        value={masked.maskedValue}
+        placeholder={placeholder ?? masked.placeholder}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         style={inputStyle}
-        {...restProps}
+        aria-invalid={ariaInvalid ?? (error ? true : undefined)}
+        aria-describedby={describedBy}
       />
-      {helperText && <div style={helperTextContainerStyle}>{helperText}</div>}
+      {helperText ? (
+        <div
+          id={helperId}
+          style={{
+            marginTop: '4px',
+            fontSize: '0.75rem',
+            lineHeight: '1.66',
+            color: error ? errorColor : 'rgba(0, 0, 0, 0.6)',
+            ...helperTextStyle,
+          }}
+        >
+          {helperText}
+        </div>
+      ) : null}
     </div>
   );
 };

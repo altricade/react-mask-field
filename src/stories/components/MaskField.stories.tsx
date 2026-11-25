@@ -91,7 +91,9 @@ export const ControlledInput = () => {
       <MaskField
         mask="9999-aaaa-9999"
         value={value}
-        onChange={e => setValue(e.target.value)}
+        onChange={e => {
+          setValue(e.target.value);
+        }}
         placeholder="____-____-____"
       />
       <div style={{ marginTop: '10px' }}>Current value: {value}</div>

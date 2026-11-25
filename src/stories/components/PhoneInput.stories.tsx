@@ -78,7 +78,13 @@ export const ControlledPhoneInput = () => {
 
   return (
     <div>
-      <PhoneInput countryCode="RU" value={phone} onChange={e => setPhone(e.target.value)} />
+      <PhoneInput
+        countryCode="RU"
+        value={phone}
+        onChange={e => {
+          setPhone(e.target.value);
+        }}
+      />
       <div style={{ marginTop: '10px' }}>Current value: {phone}</div>
     </div>
   );

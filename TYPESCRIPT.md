@@ -1,5 +1,7 @@
 # TypeScript Improvements
 
+> **Historical document.** It describes the implementation before 1.3.0, including practices this repo no longer allows (such as type assertions). For the current architecture and conventions, see [AGENTS.md](./AGENTS.md); for changes, see [CHANGELOG.md](./CHANGELOG.md).
+
 This document outlines the TypeScript improvements made to enhance type safety, improve developer experience, and fix linting issues within the React Mask Field library.
 
 ## Overview of Improvements

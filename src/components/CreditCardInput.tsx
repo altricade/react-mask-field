@@ -1,23 +1,9 @@
-import React, { forwardRef, useState, useEffect, ForwardRefRenderFunction } from 'react';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent, ForwardRefRenderFunction } from 'react';
+
 import { MaskField } from './MaskField';
 import type { MaskFieldProps } from '../types';
-
-export interface CreditCardInputProps extends Omit<MaskFieldProps, 'mask'> {
-  /**
-   * Callback when card type is detected
-   */
-  onCardTypeChange?: (cardType: CardType | null) => void;
-
-  /**
-   * Force a specific card type mask
-   */
-  cardType?: CardType;
-
-  /**
-   * Enable auto-detection of card type from number
-   */
-  detectCardType?: boolean;
-}
+import { conformValue, defaultFormatChars, parseMask } from '../utils/maskUtils';
 
 export type CardType =
   | 'visa'
@@ -29,106 +15,133 @@ export type CardType =
   | 'unionpay'
   | 'other';
 
-const CARD_PATTERNS = {
-  visa: /^4/,
-  mastercard: /^(5[1-5]|2[2-7])/,
-  amex: /^3[47]/,
-  discover: /^(6011|65|64[4-9]|622)/,
-  diners: /^(36|38|30[0-5])/,
-  jcb: /^35/,
-  unionpay: /^62/,
-};
+export interface CreditCardInputProps extends Omit<MaskFieldProps, 'mask'> {
+  /**
+   * Called when the detected (or forced) card type changes, including to null
+   * when the field is cleared.
+   */
+  onCardTypeChange?: ((cardType: CardType | null) => void) | undefined;
+
+  /**
+   * Force a specific card type (and its mask); disables detection.
+   */
+  cardType?: CardType | undefined;
+
+  /**
+   * Detect the card type from the number. Default true.
+   */
+  detectCardType?: boolean | undefined;
+}
+
+/** Checked in order; more specific prefixes come first. */
+const CARD_PATTERNS: ReadonlyArray<readonly [CardType, RegExp]> = [
+  ['visa', /^4/],
+  ['mastercard', /^(5[1-5]|2[2-7])/],
+  ['amex', /^3[47]/],
+  ['discover', /^(6011|65|64[4-9]|622)/],
+  ['diners', /^(36|38|30[0-5])/],
+  ['jcb', /^35/],
+  ['unionpay', /^62/],
+];
 
 const CARD_MASKS = {
-  amex: '9999 999999 9999',
-  diners: '9999 999999 9999',
+  amex: '9999 999999 99999', // 15 digits (4-6-5)
+  diners: '9999 999999 9999', // 14 digits (4-6-4)
   default: '9999 9999 9999 9999',
-};
+} as const;
+
+function detectCardType(cardNumber: string): CardType | null {
+  const digits = cardNumber.replace(/\D/g, '');
+  if (!digits) return null;
+  const match = CARD_PATTERNS.find(([, pattern]) => pattern.test(digits));
+  return match ? match[0] : 'other';
+}
+
+function getCardMask(type: CardType | null): string {
+  if (type === 'amex') return CARD_MASKS.amex;
+  if (type === 'diners') return CARD_MASKS.diners;
+  return CARD_MASKS.default;
+}
+
+function toStringValue(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (Array.isArray(value)) return value.map(String).join('');
+  return String(value);
+}
 
 const CreditCardInputComponent: ForwardRefRenderFunction<HTMLInputElement, CreditCardInputProps> = (
-  { cardType, detectCardType = true, onCardTypeChange, onChange, ...props },
+  {
+    cardType,
+    detectCardType: shouldDetect = true,
+    onCardTypeChange,
+    onChange,
+    onChangeCapture,
+    value,
+    defaultValue,
+    ...props
+  },
   ref
 ) => {
-  const [detectedType, setDetectedType] = useState<CardType | null>(cardType || null);
-  const [value, setValue] = useState(props.value?.toString() || '');
+  const isControlled = value !== undefined;
+  const [uncontrolledValue, setUncontrolledValue] = useState(() => toStringValue(defaultValue));
+  const currentValue = isControlled ? toStringValue(value) : uncontrolledValue;
 
-  const getMask = () => {
-    const type = cardType || detectedType;
+  const typeOf = (number: string): CardType | null =>
+    cardType ?? (shouldDetect ? detectCardType(number) : null);
+  const currentType = typeOf(currentValue);
+  const mask = getCardMask(currentType);
 
-    if (type === 'amex') return CARD_MASKS.amex;
-    if (type === 'diners') return CARD_MASKS.diners;
-    return CARD_MASKS.default;
+  // The browser value before masking: lets a paste that switches the card type
+  // be re-masked from the full input instead of the old mask's truncated value.
+  const unmaskedInputRef = useRef<string | null>(null);
+
+  const handleChangeCapture = (e: ChangeEvent<HTMLInputElement>) => {
+    unmaskedInputRef.current = e.target.value;
+    onChangeCapture?.(e);
   };
 
-  const detectType = (cardNumber: string) => {
-    const normalized = cardNumber.replace(/\D/g, '');
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const unmasked = unmaskedInputRef.current ?? e.target.value;
+    unmaskedInputRef.current = null;
 
-    if (!normalized) return null;
-
-    for (const [type, pattern] of Object.entries(CARD_PATTERNS)) {
-      if (pattern.test(normalized)) {
-        return type as CardType;
+    const nextType = typeOf(unmasked);
+    const nextMask = getCardMask(nextType);
+    if (nextMask !== mask) {
+      const input = e.target;
+      input.value = conformValue(
+        parseMask(nextMask, props.formatChars ?? defaultFormatChars),
+        unmasked,
+        props.maskChar ?? '_',
+        props.alwaysShowMask ?? false
+      );
+      if (input.ownerDocument.activeElement === input) {
+        input.setSelectionRange(input.value.length, input.value.length);
       }
     }
 
-    return 'other' as CardType;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setValue(newValue);
-
-    if (detectCardType && !cardType) {
-      const newType = detectType(newValue);
-      if (newType !== detectedType) {
-        setDetectedType(newType);
-        onCardTypeChange?.(newType);
-      }
-    }
-
+    if (!isControlled) setUncontrolledValue(e.target.value);
     onChange?.(e);
   };
 
+  // Notify on every change of the derived type — from typing or from a new
+  // controlled value — but only once per actual change.
+  const notifiedTypeRef = useRef<CardType | null>(null);
   useEffect(() => {
-    if (cardType) {
-      setDetectedType(cardType);
-      onCardTypeChange?.(cardType);
-    } else if (detectCardType && value) {
-      const newType = detectType(value);
-      if (newType !== detectedType) {
-        setDetectedType(newType);
-        onCardTypeChange?.(newType);
-      }
-    }
-  }, [cardType, value, detectCardType, detectedType, onCardTypeChange]);
-
-  // Filter out CreditCardInput-specific props to avoid React DOM warnings
-  const {
-    cardType: _,
-    detectCardType: __,
-    onCardTypeChange: ___,
-    error,
-    helperText,
-    errorColor,
-    helperTextStyle,
-    ...restProps
-  } = props as CreditCardInputProps;
+    if (currentType === notifiedTypeRef.current) return;
+    notifiedTypeRef.current = currentType;
+    onCardTypeChange?.(currentType);
+  }, [currentType, onCardTypeChange]);
 
   return (
     <MaskField
-      mask={getMask()}
       inputMode="numeric"
       type="tel"
       autoComplete="cc-number"
-      placeholder={getMask().replace(/9/g, '_')}
-      maxLength={getMask().length}
-      error={error}
-      helperText={helperText}
-      errorColor={errorColor}
-      helperTextStyle={helperTextStyle}
-      {...restProps}
-      value={value}
+      {...props}
+      mask={mask}
+      value={currentValue}
       onChange={handleChange}
+      onChangeCapture={handleChangeCapture}
       ref={ref}
     />
   );
